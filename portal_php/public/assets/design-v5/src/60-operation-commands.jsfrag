@@ -163,6 +163,10 @@
       case'new-count':begin('count');break;
       case'new-document':begin('document');break;
       case'export-inventory':case'export-movements':exportRows(name);break;
+      case'backup-export':downloadBackup();break;
+      case'backup-import':if(checkRole('manage'))document.getElementById('backup-input')?.click();break;
+      case'prev-inventory':inventoryPage--;render();break;
+      case'next-inventory':inventoryPage++;render();break;
       case'go-inventory':navigate('inventory');break;
       case'go-inventory-search':navigate('inventory');document.getElementById('inventory-search')?.focus();break;
       case'go-dashboard':navigate('dashboard');break;
