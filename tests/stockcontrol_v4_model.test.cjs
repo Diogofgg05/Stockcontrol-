@@ -90,3 +90,72 @@ test('a UI não contém endpoints ou credenciais hardcoded',()=>{
   assert.doesNotMatch(js,/sk_(test|live)_|service_role|whsec_/);
   assert.doesNotMatch(js,/fetch\s*\(|XMLHttpRequest/);
 });
+
+test('estado inicial passa validação integral',()=>{
+  assert.equal(M.validateWorkspace(demo()),true);
+});
+test('não aceita estados persistidos malformados',()=>{
+  const w=demo();w.materials[0].stock='345';
+  assert.equal(M.validateWorkspace(w),false);
+});
+test('não aceita duas referências de material repetidas',()=>{
+  const w=demo();w.materials.push({...w.materials[0]});
+  assert.equal(M.validateWorkspace(w),false);
+});
+test('não aceita reservas superiores ao stock físico em estado adulterado',()=>{
+  const w=demo();w.reservations[0].qty=500;
+  assert.equal(M.validateWorkspace(w),false);
+});
+test('não aceita movimentos com material inexistente',()=>{
+  const w=demo();w.movements[0].sku='NAO-EXISTE';
+  assert.equal(M.validateWorkspace(w),false);
+});
+test('não aceita estados de reserva nem contagem ilegais',()=>{
+  const w=demo();w.reservations[0].status='Sem autorização';
+  assert.equal(M.validateWorkspace(w),false);
+  const other=demo();other.counts.push({id:'CT-X',sku:'MAT-001',counted:10,expected:345,status:'Aprovada'});
+  assert.equal(M.validateWorkspace(other),false);
+});
+test('validar quantidades sem converter vazios em zero',()=>{
+  const m=demo().materials[0];
+  for(const v of ['', ' ', null, undefined, NaN, Infinity, -1, 0.0001, 1000000001]){
+    assert.throws(()=>M.assertCount(m,v),String(v));
+  }
+  assert.equal(M.assertCount(m,0),0);
+});
+test('stock não ultrapassa teto numérico de demonstração',()=>{
+  const w=demo(),m=w.materials[0];m.stock=1000000000;
+  assert.throws(()=>M.newStock(m,'Entrada',1,w.reservations),/máximo/);
+});
+test('três casas decimais suportadas nas quantidades',()=>{
+  const w=demo(),m=w.materials[0];
+  assert.equal(M.assertReservation(m,0.001,w.reservations),true);
+  assert.equal(M.newStock(m,'Entrada',0.001,w.reservations),345.001);
+  assert.equal(M.newStock(m,'Saída',0.001,w.reservations),344.999);
+});
+test('CSV evita fórmulas precedidas por caracteres invisíveis',()=>{
+  const fields=['\u200b=2+2','\u2060+SUM(1;1)','\ufeff@cmd','-1+2','regular'];
+  const cells=fields.map(M.csvCell);
+  for(let i=0;i<4;i++)assert.ok(cells[i].startsWith('"\''),cells[i]);
+  assert.equal(cells[4],'"regular"');
+});
+test('limites de arrays e dados financeiros dos estados guardados',()=>{
+  const w=demo();w.materials[0].cost=Infinity;
+  assert.equal(M.validateWorkspace(w),false);
+  const another=demo();another.events=Array(201).fill(another.events[0]);
+  assert.equal(M.validateWorkspace(another),false);
+});
+test('registo de ajuste tem variação assinada para auditoria',()=>{
+  const w=demo();
+  w.movements.push({id:'MV-ADJUST',sku:'MAT-001',type:'Ajuste',qty:12,delta:-12,
+    actor:'Administrador (demo)',note:'Contagem CT-1',createdAt:new Date().toISOString()});
+  assert.equal(M.validateWorkspace(w),true);
+});
+test('código implementa rollback de erros de persistência e deteção de outras abas',()=>{
+  const js=fs.readFileSync(path.join(__dirname,'../portal_php/public/assets/design-v4/app.js'),'utf8');
+  assert.match(js,/CONCURRENT_CHANGE/);
+  assert.match(js,/function recover\(/);
+  assert.match(js,/addEventListener\('storage'/);
+  assert.match(js,/host\.inert=true/);
+  assert.match(js,/function saveFeedback\(/);
+});
