@@ -1,0 +1,57 @@
+name: StockControl V5 Offline Quality
+on:
+  push:
+    branches: ['feat/stockcontrol-v4-workspace', main]
+    paths:
+      - 'portal_php/public/assets/design-v5/**'
+      - 'tests/stockcontrol_v5_*'
+      - '.github/workflows/stockcontrol-v5.yml'
+  pull_request:
+    paths:
+      - 'portal_php/public/assets/design-v5/**'
+      - 'tests/stockcontrol_v5_*'
+      - '.github/workflows/stockcontrol-v5.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reproducible source assembly
+        run: node portal_php/public/assets/design-v5/tools/build.cjs --check
+      - name: Syntax checks
+        run: |
+          node --check portal_php/public/assets/design-v5/app.js
+          node --check portal_php/public/assets/design-v5/model.js
+          node --check portal_php/public/assets/design-v5/backup.js
+          node --check tests/stockcontrol_v5_model.test.cjs
+      - name: Offline domain and backup tests
+        run: node --test tests/stockcontrol_v5_model.test.cjs
+  offline-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser testing dependency
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Real Chromium tests (desktop and mobile)
+        run: node --test tests/stockcontrol_v5_browser.cjs
+      - name: Save V5 rendered previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-v5-screenshots
+          path: tests/v5-previews/
+          if-no-files-found: ignore
+          retention-days: 7
