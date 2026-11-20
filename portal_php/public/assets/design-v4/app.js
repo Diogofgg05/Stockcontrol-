@@ -44,17 +44,49 @@
   const now=()=>new Date().toISOString();
   const uuid=prefix=>prefix+'-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
   const defaults=M.demo();
+  let persistedRaw=null;
   function load(){
-    try{const raw=localStorage.getItem(STORE);if(!raw)return M.demo();const parsed=JSON.parse(raw);
-      if(!parsed||parsed.id!=='demo'||!Array.isArray(parsed.materials)||!Array.isArray(parsed.reservations)||!Array.isArray(parsed.movements)||!Array.isArray(parsed.counts)||!Array.isArray(parsed.events))return M.demo();
-      return {...M.demo(),...parsed};
+    try{
+      const raw=localStorage.getItem(STORE);
+      persistedRaw=raw;
+      if(!raw)return M.demo();
+      const parsed=JSON.parse(raw);
+      if(!M.validateWorkspace(parsed))return M.demo();
+      return {...M.demo(),...parsed,users:M.demo().users};
     }catch{return M.demo()}
   }
   let workspace=load();
   let current='dashboard',role='Administrador',search='',category='Todos',movementFilter='Todos',mobileMenu=false;
   let modalReturnFocus=null;
   const host=document.getElementById('app');
-  function save(){try{localStorage.setItem(STORE,JSON.stringify(workspace))}catch{toast('Armazenamento local indisponível: os dados desta demonstração poderão perder-se.')}}
+  function save(){
+    if(!M.validateWorkspace(workspace))throw Error('Os dados não passaram na validação de integridade.');
+    try{
+      const existing=localStorage.getItem(STORE);
+      if(existing!==persistedRaw){
+        const error=Error('Os dados foram alterados noutra aba. O formulário foi cancelado e o inventário atualizado.');
+        error.code='CONCURRENT_CHANGE';
+        throw error;
+      }
+      const serialized=JSON.stringify(workspace);
+      localStorage.setItem(STORE,serialized);
+      persistedRaw=serialized;
+      return true;
+    }catch(error){
+      if(error.code==='CONCURRENT_CHANGE')throw error;
+      return false; // A aplicação continua utilizável, mas somente em memória desta aba.
+    }
+  }
+  function saveFeedback(saved,success='Alteração de demonstração registada.'){
+    toast(saved?success:'Alteração válida apenas nesta sessão: armazenamento local indisponível.',saved?'ok':'error');
+  }
+  function recover(error,before){
+    workspace=before;
+    if(error.code==='CONCURRENT_CHANGE'){
+      workspace=load();closeModal();render();
+    }
+    toast(error.message||'Não foi possível validar os dados.','error');
+  }
   function toast(message,type='ok'){
     const h=document.getElementById('toast');
     h.textContent=message;h.dataset.type=type;h.classList.add('visible');
@@ -76,7 +108,7 @@
   }
   function header(){
     const alerts=workspace.materials.filter(m=>M.status(m)!=='Disponível');
-    return `<header class="header"><div class="header-left"><button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button><span class="crumb">Workspace</span>${icon('chevron-right',15)}<strong>${E(titles[current])}</strong></div><div class="header-actions"><div class="top-search">${icon('search',17)}<input id="global-search" placeholder="Pesquisar materiais...  ⌘K" aria-label="Pesquisa global" value="${E(search)}"></div><button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button><div class="header-user"><span class="avatar">DM</span><span class="header-name">Demo</span></div></div></header>`;
+    return `<header class="header"><div class="header-left"><button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button><span class="crumb">Workspace</span>${icon('chevron-right',15)}<strong>${E(titles[current])}</strong></div><div class="header-actions"><div class="top-search">${icon('search',17)}<input id="global-search" placeholder="Pesquisar materiais...  ⌘K" aria-label="Pesquisa global" value="${E(search)}"></div><button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',19)}</button><button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button><div class="header-user"><span class="avatar">DM</span><span class="header-name">Demo</span></div></div></header>`;
   }
   function pageHeader(eyebrow,title,subtitle,actions=''){
     return `<div class="page-head"><div><span class="eyebrow">${E(eyebrow)}</span><h1>${E(title)}</h1><p>${E(subtitle)}</p></div>${actions?`<div class="page-actions">${actions}</div>`:''}</div>`;
@@ -179,14 +211,19 @@
     current=page;mobileMenu=false;search='';category='Todos';
     if(location.hash.slice(1)!==page)history.replaceState(null,'','#'+page);
     render();
-    window.scrollTo({top:0,behavior:'instant'});
+    window.scrollTo({top:0,behavior:'auto'});
   }
   function closeModal(){
     document.getElementById('modal-host').replaceChildren();
+    host.inert=false;
+    document.body.classList.remove('modal-open');
     if(modalReturnFocus?.isConnected)modalReturnFocus.focus();
+    modalReturnFocus=null;
   }
   function openModal(title,subtitle,body,submitLabel,kind){
     modalReturnFocus=document.activeElement;
+    host.inert=true;
+    document.body.classList.add('modal-open');
     const dialog=document.getElementById('modal-host');
     dialog.innerHTML=`<div class="modal-backdrop" data-action="close-modal"></div><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description"><div class="modal-header"><div><span class="eyebrow">STOCKCONTROL · DEMO</span><h2 id="modal-title">${E(title)}</h2><p id="modal-description">${E(subtitle)}</p></div><button type="button" class="icon-btn" data-action="close-modal" aria-label="Fechar diálogo">${icon('x')}</button></div><form id="modal-form" data-kind="${E(kind)}"><div class="modal-fields">${body}</div><div class="modal-footer">${button('Cancelar','close-modal','secondary')}<button type="submit" class="btn primary">${E(submitLabel)}</button></div></form></section>`;
     dialog.querySelector('input,select,button')?.focus();
@@ -216,6 +253,7 @@
   }
   function submitForm(form){
     const fd=new FormData(form),kind=form.dataset.kind;
+    const before=JSON.parse(JSON.stringify(workspace));
     try{
       if(kind==='material'){
         if(!checkRole('manage'))return;
@@ -255,8 +293,8 @@
         workspace.documents.unshift({id:uuid('DOC'),name:file.name.slice(0,120),category:fd.get('category'),sku:fd.get('sku'),sizeKb:Math.ceil(file.size/1024),createdAt:now()});
         eventLog('Metadados locais adicionados: '+file.name.slice(0,80));
       }
-      save();closeModal();render();toast('Alteração de demonstração registada no navegador.');
-    }catch(err){toast(err.message||'Não foi possível validar os dados.','error')}
+      const saved=save();closeModal();render();saveFeedback(saved);
+    }catch(err){recover(err,before)}
   }
   function detail(sku){
     const m=getMat(sku);if(!m)return;
@@ -272,7 +310,11 @@
     const r=workspace.reservations.find(x=>x.id===id);
     if(!r||r.status!=='Ativa')return toast('A reserva já não está ativa.','error');
     if(!confirm('Cancelar a reserva '+r.id+'?'))return;
-    r.status='Cancelada';eventLog('Reserva cancelada: '+id);save();render();toast('Reserva cancelada na demonstração.');
+    const before=JSON.parse(JSON.stringify(workspace));
+    try{
+      r.status='Cancelada';eventLog('Reserva cancelada: '+id);
+      const saved=save();render();saveFeedback(saved,'Reserva cancelada na demonstração.');
+    }catch(err){recover(err,before)}
   }
   function countDecision(id,approve){
     if(!checkRole('approve'))return;
@@ -284,10 +326,20 @@
       if(c.counted<reserved)return toast('A contagem é inferior às reservas ativas. Resolve primeiro as reservas.','error');
     }
     if(!confirm(approve?'Aplicar o acerto de stock nesta demonstração?':'Rejeitar esta contagem?'))return;
-    if(approve)m.stock=c.counted;
-    c.status=approve?'Aplicada':'Rejeitada';
-    eventLog('Contagem '+c.status.toLowerCase()+': '+c.id);
-    save();render();toast('Contagem '+c.status.toLowerCase()+'.');
+    const before=JSON.parse(JSON.stringify(workspace));
+    try{
+      if(approve){
+        const delta=Math.round((c.counted-c.expected)*1000)/1000;
+        m.stock=c.counted;
+        if(delta!==0)workspace.movements.unshift({
+          id:uuid('MV'),sku:c.sku,type:'Ajuste',qty:Math.abs(delta),delta,
+          actor:role+' (demo)',note:'Acerto de inventário físico '+c.id,createdAt:now()
+        });
+      }
+      c.status=approve?'Aplicada':'Rejeitada';
+      eventLog('Contagem '+c.status.toLowerCase()+': '+c.id);
+      const saved=save();render();saveFeedback(saved,'Contagem '+c.status.toLowerCase()+'.');
+    }catch(err){recover(err,before)}
   }
   function exportRows(kind){
     let headers,rows,name;
@@ -318,6 +370,7 @@
       case'new-document':begin('document');break;
       case'export-inventory':case'export-movements':exportRows(name);break;
       case'go-inventory':navigate('inventory');break;
+      case'go-inventory-search':navigate('inventory');document.getElementById('inventory-search')?.focus();break;
       case'go-dashboard':navigate('dashboard');break;
       case'detail':detail(data.sku);break;
       case'cancel-reservation':cancelReservation(data.id);break;
@@ -327,7 +380,11 @@
       case'no-checkout':toast('Não existe checkout ativo nesta demonstração.','error');break;
       case'reset-demo':
         if(!checkRole('manage'))return;
-        if(confirm('Apagar as alterações locais e repor os dados fictícios originais?')){workspace=M.demo();save();render();toast('Demonstração reposta.')}
+        if(confirm('Apagar as alterações locais e repor os dados fictícios originais?')){
+          const before=JSON.parse(JSON.stringify(workspace));
+          try{workspace=M.demo();const saved=save();render();saveFeedback(saved,'Demonstração reposta.')}
+          catch(err){recover(err,before)}
+        }
         break;
     }
   }
@@ -377,10 +434,17 @@
       if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
       if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
     }
-    if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){
+    if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'&&!document.querySelector('.modal')){
       event.preventDefault();if(current!=='inventory')navigate('inventory');
       document.getElementById('inventory-search')?.focus();
     }
+  });
+  window.addEventListener('storage',event=>{
+    if(event.key!==STORE)return;
+    workspace=load();
+    if(document.querySelector('.modal'))closeModal();
+    render();
+    toast('Dados de demonstração atualizados a partir de outra aba.');
   });
   window.addEventListener('hashchange',()=>{const n=location.hash.slice(1);if(pages[n]&&n!==current)navigate(n)});
   const initial=location.hash.slice(1);if(pages[initial])current=initial;
