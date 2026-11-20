@@ -7,7 +7,7 @@ const http=require('node:http');
 const {chromium}=require('playwright');
 const root=path.join(__dirname,'../portal_php/public/assets/design-v5');
 const previews=path.join(__dirname,'v5-previews');
-const allowed=new Set(['index.html','model.js','app.js','styles.css']);
+const allowed=new Set(['index.html','model.js','backup.js','app.js','styles.css']);
 const server=http.createServer((req,res)=>{
   const name=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname).replace(/^\/+/, '')||'index.html';
   if(!allowed.has(name)){res.writeHead(404);res.end('Not found');return}
