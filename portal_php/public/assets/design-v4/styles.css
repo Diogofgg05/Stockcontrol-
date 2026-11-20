@@ -11,3 +11,12 @@
 .movement-type{display:inline-flex;align-items:center;gap:5px;border-radius:7px;font-weight:750;font-size:10px;padding:6px 9px}
 .movement-type.inflow{color:#158c6b;background:#e8f8f1}
 .movement-type.outflow{color:#b57a2f;background:#fff3e5}
+
+/* Audit pass: functional mobile search and accessible modal scroll locking. */
+.mobile-search{display:none}
+body.modal-open{overflow:hidden}
+.modal:focus-visible{outline:3px solid #b4c4ff}
+@media(max-width:590px){
+  .top-search{display:none}
+  .mobile-search{display:grid}
+}
