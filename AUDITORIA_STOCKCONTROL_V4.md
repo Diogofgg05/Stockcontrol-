@@ -67,3 +67,16 @@ Reunir a distribuição completa; implementar autorização por empresa e por op
 
 **Limitação:** as alterações são locais ao navegador. O controlo de concorrência transacional entre trabalhadores reais e a autorização por empresa continuam dependentes do backend que não se encontra neste repositório.
 
+
+## Ronda adicional — alertas de disponibilidade real (20/11/2026)
+
+**Falha identificada:** os estados `Disponível` e `Stock baixo` eram derivados exclusivamente do stock físico. Uma referência com 345 unidades físicas e 345 unidades reservadas podia surgir como `Disponível`, embora não fosse possível retirar nenhuma unidade livre.
+
+**Correção:** foi introduzida uma distinção explícita entre `Esgotado` (stock físico zero), `Sem disponibilidade` (stock físico positivo, mas saldo livre zero), `Stock baixo` (saldo livre positivo igual ou inferior ao mínimo) e `Disponível`. A lógica aplica-se à tabela de inventário, alertas, dashboard e relatórios. A classificação não altera a quantidade física.
+
+**Desempenho:** o `inventoryView` agrega reservas por SKU num único percurso e reutiliza os resultados por renderização. Isto elimina recalcular todas as reservas em cada linha do catálogo e em cada indicador do dashboard.
+
+**Cobertura acrescentada:** testes unitários verificam bloqueios totais por reservas, baixo saldo livre, distinção entre esgotamento e reserva integral, consistência dos agregados e manutenção do estado ao consumir uma reserva; teste Chromium confirma a apresentação de indisponibilidade após reserva total.
+
+**Limites:** continua a ser a V4 local, sem base de dados transacional, sem RLS nem autorização real no servidor. O estado de disponibilidade é um indicador, não substitui a validação transacional ao registar um movimento.
+
