@@ -4,6 +4,8 @@
   const STORE='stockcontrol:v5:offline:v1';
   const OLD_STORE='stockcontrol:v4:demo:v1';
   const titles={design:'Design system',dashboard:'Visão geral',inventory:'Inventário',movements:'Movimentos',reservations:'Reservas',counts:'Inventário físico',documents:'Documentos',reports:'Relatórios',team:'Equipa e permissões',settings:'Definições',billing:'Planos',website:'Website'};
+  // Additional pages from src/pages are automatically registered by the builder.
+  const additionalPages={};
   const menuGroups=[
     {label:'OPERAÇÕES',links:[['dashboard','layout-dashboard'],['inventory','package'],['movements','arrow-left-right'],['reservations','layers'],['counts','clipboard-check']]},
     {label:'GESTÃO',links:[['documents','file-text'],['reports','chart-no-axes-combined'],['team','users']]},
@@ -339,7 +341,7 @@
   function website(){
     return `<div class="web-hero"><div><span class="eyebrow">STOCKCONTROL · PLATAFORMA PARA EQUIPAS DE PRODUÇÃO</span><h1>O teu inventário.<br><em>Sob controlo.</em></h1><p>Materiais, reservas, movimentos, contagens e relatórios num único espaço organizado. Uma experiência moderna, pensada para a fábrica.</p><div class="web-buttons">${button('Explorar workspace','go-dashboard','primary')}${button('Ver inventário','go-inventory','secondary')}</div><span class="web-disclaimer">Pré-visualização local, sem autenticação nem operações reais</span></div><div class="web-preview"><div class="preview-kicker">Visão geral <span class="tag">DEMO</span></div><div class="web-card-grid"><div><span>Referências</span><strong>${M.summary(workspace).total}</strong></div><div><span>Reservas ativas</span><strong>${M.summary(workspace).active}</strong></div></div><div class="mock-chart"><span style="height:54%"></span><span style="height:76%"></span><span style="height:61%"></span><span style="height:92%"></span><span style="height:81%"></span><span style="height:100%"></span><span style="height:73%"></span></div></div></div><div class="feature-grid">${[['package','Inventário','Stock, mínimos, categorias e localizações.'],['layers','Planeamento','Reservas ligadas a ordens de produção.'],['clipboard-check','Rastreabilidade','Contagens, aprovações e histórico de operações.']].map(([i,t,d])=>`<article class="feature-card">${icon(i,24)}<h3>${t}</h3><p>${d}</p></article>`).join('')}</div>`;
   }
-  const pages={dashboard,inventory,movements,reservations,counts,documents,reports,team,settings,billing,website,design:componentCatalog};
+  const pages={dashboard,inventory,movements,reservations,counts,documents,reports,team,settings,billing,website,design:componentCatalog,...additionalPages};
   function render(){
     stockView=M.inventoryView(workspace);
     host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<div class="body-columns"><main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V6 Reference Dark · Dados locais · Sem API ou pagamentos reais</footer></main>${activityAside()}</div></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
