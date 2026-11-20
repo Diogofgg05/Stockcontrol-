@@ -1,3 +1,13 @@
+# StockControl — protótipos de interface
+
+## V4 Workspace — evolução de navegação e fluxos
+
+A nova versão em [`portal_php/public/assets/design-v4/`](portal_php/public/assets/design-v4/) disponibiliza 11 páginas navegáveis, inventário de exemplo, movimentos, reservas, contagens físicas, relatórios e validações locais, com design responsivo e testes automatizados. Abre `portal_php/public/assets/design-v4/index.html` para testar no navegador.
+
+**Importante:** a V4 é **um protótipo autónomo de demonstração**, não comunica com o backend nem substitui a distribuição completa. Os dados são fictícios e mantidos apenas no navegador. Consulta as [limitações, testes e integração futura](portal_php/public/assets/design-v4/README.md).
+
+---
+
 # StockControl — design V3.0
 
 Pré-visualização interativa do novo design do StockControl. Código em [`portal_php/public/assets/design-v3/`](portal_php/public/assets/design-v3/).
