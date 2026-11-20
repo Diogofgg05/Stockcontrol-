@@ -17,7 +17,14 @@
     counts:[],events:[{id:'EV-001',action:'Ambiente de demonstração iniciado',actor:'Sistema',createdAt:'2026-11-19T09:00:00.000Z'}],
     documents:[],users:[{name:'Ana Silva',role:'Administrador',state:'Ativo'},{name:'Bruno Costa',role:'Operador',state:'Ativo'},{name:'Carla Reis',role:'Auditor',state:'Ativo'}]
   });
-  function status(m){if(m.stock===0)return'Esgotado';return m.stock<=m.min?'Stock baixo':'Disponível'}
+  // Quando existe stock físico mas todas as unidades estão reservadas,
+  // o estado não pode indicar disponibilidade para novas saídas.
+  function status(m,reservations){
+    const free=reservations?available(m,reservations):m.stock;
+    if(m.stock===0)return 'Esgotado';
+    if(free===0)return 'Sem disponibilidade';
+    return free<=m.min?'Stock baixo':'Disponível';
+  }
   const MAX_QTY = 1000000000;
   const preciseQty = (value,zeroAllowed=false) => {
     if(value===null||value===undefined||typeof value==='string'&&!value.trim())return false;
@@ -75,7 +82,32 @@
     if(!preciseQty(value,true))throw Error('A contagem tem de ser zero ou superior (até 3 casas decimais).');
     return Number(value);
   }
-  function summary(workspace){const ms=workspace.materials;return{total:ms.length,low:ms.filter(m=>status(m)==='Stock baixo').length,out:ms.filter(m=>status(m)==='Esgotado').length,active:workspace.reservations.filter(r=>r.status==='Ativa').length,worth:ms.reduce((sum,m)=>sum+(m.stock*Number(m.cost||0)),0)}}
+  // Agregação O(materiais + reservas), em vez de recalcular todas as
+  // reservas para cada linha e indicador do dashboard.
+  function inventoryView(workspace){
+    const reservedBySku=new Map(),statusBySku=new Map(),availableBySku=new Map();
+    let active=0,low=0,out=0,blocked=0,worth=0;
+    for(const r of workspace.reservations){
+      if(r.status!=='Ativa')continue;
+      active++;
+      reservedBySku.set(r.sku,roundQty((reservedBySku.get(r.sku)||0)+reservationRemaining(r)));
+    }
+    for(const m of workspace.materials){
+      const free=Math.max(0,roundQty(m.stock-(reservedBySku.get(m.sku)||0)));
+      const state=m.stock===0?'Esgotado':free===0?'Sem disponibilidade':free<=m.min?'Stock baixo':'Disponível';
+      availableBySku.set(m.sku,free);
+      statusBySku.set(m.sku,state);
+      if(state==='Stock baixo')low++;
+      if(state==='Esgotado')out++;
+      if(state==='Sem disponibilidade')blocked++;
+      worth+=m.stock*Number(m.cost||0);
+    }
+    return {total:workspace.materials.length,low,out,blocked,active,worth,reservedBySku,statusBySku,availableBySku};
+  }
+  function summary(workspace){
+    const {total,low,out,blocked,active,worth}=inventoryView(workspace);
+    return {total,low,out,blocked,active,worth};
+  }
   function validString(v,max){return typeof v==='string'&&v.length>0&&v.length<=max}
   function validId(v){return validString(v,80)}
   function validateWorkspace(w){
@@ -128,7 +160,7 @@
   }
   function toCsv(rows,headers){return '\ufeff'+[headers,...rows].map(row=>row.map(csvCell).join(';')).join('\r\n')+'\r\n'}
   function normalizedSku(v){return String(v||'').trim().toUpperCase()}
-  const api={demo,status,reserved,reservationRemaining,planConsumption,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
+  const api={demo,status,inventoryView,reserved,reservationRemaining,planConsumption,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(typeof window!=='undefined')window.StockModel=api;
 })();
