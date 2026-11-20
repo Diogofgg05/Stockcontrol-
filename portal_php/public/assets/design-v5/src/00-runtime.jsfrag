@@ -4,6 +4,8 @@
   const STORE='stockcontrol:v5:offline:v1';
   const OLD_STORE='stockcontrol:v4:demo:v1';
   const titles={design:'Design system',dashboard:'Visão geral',inventory:'Inventário',movements:'Movimentos',reservations:'Reservas',counts:'Inventário físico',documents:'Documentos',reports:'Relatórios',team:'Equipa e permissões',settings:'Definições',billing:'Planos',website:'Website'};
+  // Additional pages from src/pages are automatically registered by the builder.
+  const additionalPages={};
   const menuGroups=[
     {label:'OPERAÇÕES',links:[['dashboard','layout-dashboard'],['inventory','package'],['movements','arrow-left-right'],['reservations','layers'],['counts','clipboard-check']]},
     {label:'GESTÃO',links:[['documents','file-text'],['reports','chart-no-axes-combined'],['team','users']]},
