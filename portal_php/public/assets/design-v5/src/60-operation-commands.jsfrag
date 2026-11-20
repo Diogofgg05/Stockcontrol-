@@ -1,0 +1,185 @@
+  function begin(kind,sku){
+    if(kind==='material'){
+      if(!checkRole('manage'))return;
+      openModal('Adicionar material','Criar referência fictícia no catálogo local.',field('Código SKU','sku','text','','maxlength="36"')+field('Nome','name','text','','maxlength="100"')+
+        `<div class="field-grid">${field('Categoria','category','text','','maxlength="40"')}${field('Unidade','unit','text','un','maxlength="10"')}</div><div class="field-grid">${field('Stock inicial','stock','number','0','min="0" step="0.001"')}${field('Stock mínimo','min','number','0','min="0" step="0.001"')}</div><div class="field-grid">${field('Localização','location','text','A1-01','maxlength="36"')}${field('Custo unitário (€)','cost','number','0','min="0" step="0.01"')}</div>`,'Adicionar material','material');
+    }else if(kind==='movement'){
+      if(!checkRole('move'))return;
+      openModal('Novo movimento','Uma entrada, saída ou devolução altera apenas os dados fictícios locais.',
+        `<label class="field-label">Tipo<select class="field" name="type"><option>Entrada</option><option>Saída</option><option>Devolução</option></select></label>`+materialSelect(sku)+field('Quantidade','qty','number','1','min="0.001" step="0.001"')+`<label class="field-label">Observação (opcional)<textarea name="note" class="field" maxlength="250" rows="2"></textarea></label>`,'Registar movimento','movement');
+    }else if(kind==='reservation'){
+      if(!checkRole('reserve'))return;
+      openModal('Criar reserva','A quantidade fica alocada à ordem sem alterar o stock físico.',materialSelect(sku)+field('Ordem de produção','order','text','OP-106','maxlength="40"')+field('Quantidade','qty','number','1','min="0.001" step="0.001"'),'Criar reserva','reservation');
+    }else if(kind==='consume'){
+      if(!checkRole('move'))return;
+      const r=workspace.reservations.find(x=>x.id===sku);
+      if(!r||r.status!=='Ativa')return toast('A reserva não está ativa.','error');
+      openModal('Consumir material reservado','Reserva '+r.id+' · '+r.order+' · saldo '+num(M.reservationRemaining(r))+' '+(getMat(r.sku)?.unit||''),
+        `<div class="detail-grid"><div><small>Material</small><strong>${E(getMat(r.sku)?.name||r.sku)}</strong></div><div><small>Reservado restante</small><strong>${num(M.reservationRemaining(r))}</strong></div></div>`+
+        `<input type="hidden" name="reservationId" value="${E(r.id)}">`+
+        field('Quantidade a consumir','qty','number',String(M.reservationRemaining(r)),'min="0.001" step="0.001"')+
+        `<label class="field-label">Observação (opcional)<textarea name="note" class="field" maxlength="250" rows="2"></textarea></label>`,
+        'Registar consumo','consume');
+    }else if(kind==='count'){
+      if(!checkRole('count'))return;
+      openModal('Nova contagem física','Regista a contagem; a aprovação será efetuada separadamente.',materialSelect(sku)+field('Quantidade contada','counted','number','0','min="0" step="0.001"'),'Guardar contagem','count');
+    }else if(kind==='document'){
+      if(!checkRole('document'))return;
+      openModal('Registar metadados','Só o nome e dimensão serão registados; o conteúdo não é guardado.',`<label class="field-label">Ficheiro (PDF, PNG ou JPEG; até 5 MB)<input class="field" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" required></label>`+
+        `<label class="field-label">Categoria<select class="field" name="category"><option>Ficha técnica</option><option>Guia de remessa</option><option>Fotografia</option><option>Outro</option></select></label><label class="field-label">Material associado (opcional)<select class="field" name="sku"><option value="">Geral</option>${workspace.materials.map(m=>`<option value="${E(m.sku)}">${E(m.name)}</option>`).join('')}</select></label>`,'Registar metadados','document');
+    }
+  }
+  function submitForm(form){
+    const fd=new FormData(form),kind=form.dataset.kind;
+    const before=JSON.parse(JSON.stringify(workspace));
+    try{
+      if(kind==='material'){
+        if(!checkRole('manage'))return;
+        const sku=M.normalizedSku(fd.get('sku'));
+        if(!/^[A-Z0-9][A-Z0-9._-]{1,35}$/.test(sku))throw Error('SKU inválido: usa letras, números, pontos, traços ou sublinhados.');
+        if(getMat(sku))throw Error('Já existe um material com esse SKU.');
+        const name=String(fd.get('name')||'').trim(),categoryName=String(fd.get('category')||'').trim(),unit=String(fd.get('unit')||'').trim(),location=String(fd.get('location')||'').trim();
+        const stock=M.assertCount({sku},fd.get('stock')),min=M.assertCount({sku},fd.get('min')),cost=Number(fd.get('cost'));
+        if(!name||name.length>100||!categoryName||categoryName.length>40||!unit||unit.length>10||!location||location.length>36||!Number.isFinite(cost)||cost<0||cost>1000000000)throw Error('Preenche corretamente os dados do material.');
+        workspace.materials.push({sku,name,category:categoryName,unit,stock,min,location,cost:Math.round(cost*100)/100});
+        eventLog('Material criado: '+sku);
+      }else if(kind==='movement'){
+        if(!checkRole('move'))return;
+        const sku=fd.get('sku'),m=getMat(sku),type=fd.get('type'),qty=Number(fd.get('qty'));
+        m.stock=M.newStock(m,type,qty,workspace.reservations);
+        workspace.movements.unshift({id:uuid('MV'),sku,type,qty,actor:role+' (demo)',note:String(fd.get('note')||'').trim(),createdAt:now()});
+        eventLog('Movimento '+type+': '+sku);
+      }else if(kind==='reservation'){
+        if(!checkRole('reserve'))return;
+        const sku=fd.get('sku'),qty=Number(fd.get('qty')),order=String(fd.get('order')||'').trim();
+        if(!order||order.length>40)throw Error('Introduz uma ordem de produção válida (até 40 caracteres).');
+        M.assertReservation(getMat(sku),qty,workspace.reservations);
+        workspace.reservations.unshift({id:uuid('RS'),sku,qty,consumed:0,order,status:'Ativa',createdAt:now()});
+        eventLog('Reserva criada: '+order);
+      }else if(kind==='consume'){
+        if(!checkRole('move'))return;
+        const reservationId=String(fd.get('reservationId')||'');
+        const reservation=workspace.reservations.find(r=>r.id===reservationId);
+        const material=reservation?getMat(reservation.sku):null;
+        const plan=M.planConsumption(material,reservation,fd.get('qty'),workspace.reservations);
+        material.stock=plan.stock;
+        reservation.consumed=plan.consumed;
+        reservation.status=plan.status;
+        workspace.movements.unshift({
+          id:uuid('MV'),sku:material.sku,type:'Consumo',qty:plan.used,delta:-plan.used,
+          reservationId:reservation.id,order:reservation.order,
+          actor:role+' (demo)',note:String(fd.get('note')||'').trim(),createdAt:now()
+        });
+        eventLog('Consumo da reserva '+reservation.id+': '+num(plan.used)+' '+material.unit);
+      }else if(kind==='count'){
+        if(!checkRole('count'))return;
+        const m=getMat(fd.get('sku')),counted=M.assertCount(m,fd.get('counted'));
+        workspace.counts.unshift({id:uuid('CT'),sku:m.sku,counted,expected:m.stock,status:'Pendente',createdAt:now()});
+        eventLog('Contagem pendente: '+m.sku);
+      }else if(kind==='document'){
+        if(!checkRole('document'))return;
+        const file=fd.get('file');
+        if(!(file instanceof File)||file.size===0)throw Error('Seleciona um ficheiro válido.');
+        if(file.size>5*1024*1024)throw Error('Ficheiro superior a 5 MB.');
+        const ext=(file.name.split('.').pop()||'').toLowerCase();
+        if(!['pdf','png','jpg','jpeg'].includes(ext)||!['application/pdf','image/png','image/jpeg'].includes(file.type))throw Error('Formato inválido. Usa PDF, PNG ou JPEG.');
+        workspace.documents.unshift({id:uuid('DOC'),name:file.name.slice(0,120),category:fd.get('category'),sku:fd.get('sku'),sizeKb:Math.ceil(file.size/1024),createdAt:now()});
+        eventLog('Metadados locais adicionados: '+file.name.slice(0,80));
+      }
+      const saved=save();closeModal();render();saveFeedback(saved);
+    }catch(err){recover(err,before)}
+  }
+  function detail(sku){
+    const m=getMat(sku);if(!m)return;
+    const rs=M.reserved(m.sku,workspace.reservations);
+    openModal(m.name,'Detalhes de material em ambiente de demonstração.',
+      `<div class="detail-grid"><div><small>SKU</small><strong>${E(m.sku)}</strong></div><div><small>Localização</small><strong>${E(m.location)}</strong></div><div><small>Stock físico</small><strong>${num(m.stock)} ${E(m.unit)}</strong></div><div><small>Reservado</small><strong>${num(rs)} ${E(m.unit)}</strong></div><div><small>Disponível</small><strong>${num(M.available(m,workspace.reservations))} ${E(m.unit)}</strong></div><div><small>Mínimo</small><strong>${num(m.min)} ${E(m.unit)}</strong></div></div><p class="modal-hint">As quantidades de demonstração não são sincronizadas com o stock real.</p>`,
+      'Fechar','view');
+    const f=document.getElementById('modal-form');
+    f.querySelector('[type=submit]').textContent='Fechar';
+  }
+  function cancelReservation(id){
+    if(!checkRole('reserve'))return;
+    const r=workspace.reservations.find(x=>x.id===id);
+    if(!r||r.status!=='Ativa')return toast('A reserva já não está ativa.','error');
+    if(!confirm('Cancelar o saldo ainda reservado de '+r.id+'? Os consumos já efetuados serão mantidos.'))return;
+    const before=JSON.parse(JSON.stringify(workspace));
+    try{
+      r.status='Cancelada';eventLog('Reserva cancelada: '+id);
+      const saved=save();render();saveFeedback(saved,'Reserva cancelada na demonstração.');
+    }catch(err){recover(err,before)}
+  }
+  function countDecision(id,approve){
+    if(!checkRole('approve'))return;
+    const c=workspace.counts.find(x=>x.id===id),m=c?getMat(c.sku):null;
+    if(!c||c.status!=='Pendente'||!m)return toast('Contagem inválida ou já tratada.','error');
+    if(approve){
+      if(m.stock!==c.expected)return toast('Stock alterado após a contagem. Regista uma contagem nova.','error');
+      const reserved=M.reserved(c.sku,workspace.reservations);
+      if(c.counted<reserved)return toast('A contagem é inferior às reservas ativas. Resolve primeiro as reservas.','error');
+    }
+    if(!confirm(approve?'Aplicar o acerto de stock nesta demonstração?':'Rejeitar esta contagem?'))return;
+    const before=JSON.parse(JSON.stringify(workspace));
+    try{
+      if(approve){
+        const delta=Math.round((c.counted-c.expected)*1000)/1000;
+        m.stock=c.counted;
+        if(delta!==0)workspace.movements.unshift({
+          id:uuid('MV'),sku:c.sku,type:'Ajuste',qty:Math.abs(delta),delta,
+          actor:role+' (demo)',note:'Acerto de inventário físico '+c.id,createdAt:now()
+        });
+      }
+      c.status=approve?'Aplicada':'Rejeitada';
+      eventLog('Contagem '+c.status.toLowerCase()+': '+c.id);
+      const saved=save();render();saveFeedback(saved,'Contagem '+c.status.toLowerCase()+'.');
+    }catch(err){recover(err,before)}
+  }
+  function exportRows(kind){
+    let headers,rows,name;
+    if(kind==='export-inventory'){
+      headers=['SKU','Material','Categoria','Unidade','Stock','Reservado','Disponível','Mínimo','Localização','Custo unitário EUR'];
+      rows=workspace.materials.map(m=>[m.sku,m.name,m.category,m.unit,m.stock,M.reserved(m.sku,workspace.reservations),M.available(m,workspace.reservations),m.min,m.location,m.cost]);name='stockcontrol-demo-inventario.csv';
+    }else{
+      headers=['ID','Data','Material SKU','Tipo','Quantidade','Variação de stock','Responsável','Observação'];
+      rows=workspace.movements.map(m=>[m.id,m.createdAt,m.sku,m.type,m.qty,
+        m.type==='Ajuste'||m.type==='Consumo'?m.delta:(m.type==='Saída'?-m.qty:m.qty),m.actor,m.note||'']);name='stockcontrol-demo-movimentos.csv';
+    }
+    const blob=new Blob([M.toCsv(rows,headers)],{type:'text/csv;charset=utf-8'});
+    const href=URL.createObjectURL(blob),a=document.createElement('a');a.href=href;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);toast('CSV da demonstração exportado.');
+  }
+  function notifications(){
+    const list=lows();
+    const message=list.length?list.map(m=>m.name+' ('+stockView.statusBySku.get(m.sku)+')').join('\n'):'Não existem materiais em alerta.';
+    openModal('Centro de notificações',list.length+' materiais precisam de atenção.',`<div class="notification-list">${E(message).replace(/\n/g,'<br>')}</div>`,'Fechar','view');
+  }
+  function handleAction(name,data={}){
+    switch(name){
+      case'toggle-menu':mobileMenu=!mobileMenu;render();break;
+      case'close-menu':mobileMenu=false;render();break;
+      case'close-modal':closeModal();break;
+      case'new-movement':begin('movement');break;
+      case'add-material':begin('material');break;
+      case'new-reservation':begin('reservation');break;
+      case'new-count':begin('count');break;
+      case'new-document':begin('document');break;
+      case'export-inventory':case'export-movements':exportRows(name);break;
+      case'go-inventory':navigate('inventory');break;
+      case'go-inventory-search':navigate('inventory');document.getElementById('inventory-search')?.focus();break;
+      case'go-dashboard':navigate('dashboard');break;
+      case'detail':detail(data.sku);break;
+      case'consume-reservation':begin('consume',data.id);break;
+      case'cancel-reservation':cancelReservation(data.id);break;
+      case'approve-count':countDecision(data.id,true);break;
+      case'reject-count':countDecision(data.id,false);break;
+      case'notifications':notifications();break;
+      case'no-checkout':toast('Não existe checkout ativo nesta demonstração.','error');break;
+      case'reset-demo':
+        if(!checkRole('manage'))return;
+        if(confirm('Apagar as alterações locais e repor os dados fictícios originais?')){
+          const before=JSON.parse(JSON.stringify(workspace));
+          try{workspace=M.demo();const saved=save();render();saveFeedback(saved,'Demonstração reposta.')}
+          catch(err){recover(err,before)}
+        }
+        break;
+    }
+  }
