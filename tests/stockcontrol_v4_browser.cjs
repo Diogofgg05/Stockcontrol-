@@ -223,6 +223,7 @@ test('cancelamento após consumo parcial preserva histórico e stock descontado'
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/333/);
   assert.match(await page.locator('.detail-grid').innerText(),/0/);
+  await page.locator('[data-action="close-modal"]').last().click();
   await page.locator('[data-nav="movements"]').click();
   await page.locator('[data-movfilter="Consumo"]').click();
   assert.match(await page.locator('tbody').innerText(),/12/);
