@@ -83,7 +83,7 @@ test('pré-visualização inclui aviso explícito de dados fictícios',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   assert.match(html,/Demonstração/);
-  assert.match(app,/Sem API, autenticação ou pagamentos reais/);
+  assert.match(app,/Sem API ou pagamentos reais/);
   assert.match(app,/StockControl V5 Offline/);
 });
 test('a UI não contém endpoints ou credenciais hardcoded',()=>{
