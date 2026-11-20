@@ -168,6 +168,8 @@
       case'prev-inventory':inventoryPage--;render();break;
       case'next-inventory':inventoryPage++;render();break;
       case'go-inventory':navigate('inventory');break;
+      case'go-reservations':navigate('reservations');break;
+      case'demo-filter':designFilter=data.demo||'Todos';render();break;
       case'go-inventory-search':navigate('inventory');document.getElementById('inventory-search')?.focus();break;
       case'go-dashboard':navigate('dashboard');break;
       case'detail':detail(data.sku);break;

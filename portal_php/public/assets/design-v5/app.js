@@ -3,11 +3,13 @@
   const M=window.StockModel;
   const STORE='stockcontrol:v5:offline:v1';
   const OLD_STORE='stockcontrol:v4:demo:v1';
-  const titles={dashboard:'Visão geral',inventory:'Inventário',movements:'Movimentos',reservations:'Reservas',counts:'Inventário físico',documents:'Documentos',reports:'Relatórios',team:'Equipa e permissões',settings:'Definições',billing:'Planos',website:'Website'};
+  const titles={design:'Design system',dashboard:'Visão geral',inventory:'Inventário',movements:'Movimentos',reservations:'Reservas',counts:'Inventário físico',documents:'Documentos',reports:'Relatórios',team:'Equipa e permissões',settings:'Definições',billing:'Planos',website:'Website'};
+  // Additional pages from src/pages are automatically registered by the builder.
+  const additionalPages={};
   const menuGroups=[
     {label:'OPERAÇÕES',links:[['dashboard','layout-dashboard'],['inventory','package'],['movements','arrow-left-right'],['reservations','layers'],['counts','clipboard-check']]},
     {label:'GESTÃO',links:[['documents','file-text'],['reports','chart-no-axes-combined'],['team','users']]},
-    {label:'CONTA',links:[['settings','settings'],['billing','credit-card'],['website','globe']]}
+    {label:'CONTA',links:[['settings','settings'],['design','chart-no-axes-combined'],['billing','credit-card'],['website','globe']]}
   ];
   const icons={
     'layout-dashboard':'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -64,6 +66,7 @@
   let workspace=load();
   let current='dashboard',role='Administrador',search='',category='Todos',movementFilter='Todos',mobileMenu=false;
   let inventorySort='sku',inventoryPage=1;
+  let chartSeries='both',designFilter='Todos';
   const PAGE_SIZE=8;
   let modalReturnFocus=null;
   let stockView=M.inventoryView(workspace);
@@ -134,17 +137,26 @@
   function button(text,action,extra='',disabled=false){return `<button type="button" class="btn ${extra}" data-action="${action}" ${disabled?'disabled':''}>${text}</button>`}
   const pill=status=>`<span class="pill ${status==='Disponível'||status==='Aplicada'||status==='Ativa'||status==='Concluída'?'good':status==='Esgotado'||status==='Cancelada'||status==='Sem disponibilidade'?'bad':'warning'}">${E(status)}</span>`;
   function sidebar(){
-    return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
-      <div class="brand"><div class="brand-logo">${icon('box',24)}</div><div><strong>stockcontrol<span>.</span></strong><small>WORKSPACE INDUSTRIAL</small></div><button class="sidebar-x" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
-      <div class="workspace-switch"><div class="workspace-avatar">F</div><div><strong>Fábrica Demo</strong><small>Ambiente local · ficção</small></div>${icon('chevron-down',16)}</div>
-      <div class="side-links">${menuGroups.map(group=>`<div class="side-group"><span class="side-label">${group.label}</span>${group.links.map(([key,ic])=>`<button data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic)}<span>${E(titles[key])}</span>${key==='inventory'&&stockView.low+stockView.out+stockView.blocked>0?`<b class="side-count">${stockView.low+stockView.out+stockView.blocked}</b>`:''}</button>`).join('')}</div>`).join('')}</div>
-      <div class="sidebar-bottom"><div class="side-note">${icon('shield-check',20)}<strong>Ambiente de demonstração</strong><span>Sem ligação à base de dados ou API real.</span></div><button class="side-account" data-nav="settings"><span class="avatar">DM</span><span><b>Equipa de demonstração</b><small>Papel: ${E(role)}</small></span>${icon('chevron-right',16)}</button></div>
-    </aside>`;
-  }
+ return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
+  <div class="brand"><button type="button" class="brand-logo" data-nav="dashboard" title="StockControl" aria-label="Ir para visão geral"><span class="brand-mark"><i></i><i></i><i></i></span></button><button class="sidebar-x icon-btn" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
+  <nav class="side-links" aria-label="Áreas do StockControl">
+  ${menuGroups.map(g=>`<div class="side-group">${g.links.map(([key,ic])=>`<button title="${E(titles[key])}" aria-label="${E(titles[key])}" data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic,20)}<span class="rail-tooltip">${E(titles[key])}</span>${key==='inventory'&&stockView.low+stockView.out+stockView.blocked>0?`<b class="side-count">${stockView.low+stockView.out+stockView.blocked}</b>`:''}</button>`).join('')}</div>`).join('')}
+  </nav>
+  <div class="sidebar-bottom"><button title="Definições" aria-label="Definições" class="side-account ${current==='settings'?'active':''}" data-nav="settings">${icon('settings',21)}</button></div>
+ </aside>`;
+}
   function header(){
-    const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
-    return `<header class="header"><div class="header-left"><button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button><span class="crumb">Workspace</span>${icon('chevron-right',15)}<strong>${E(titles[current])}</strong></div><div class="header-actions"><div class="top-search">${icon('search',17)}<input id="global-search" placeholder="Pesquisar materiais...  ⌘K" aria-label="Pesquisa global" value="${E(search)}"></div><button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',19)}</button><button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button><div class="header-user"><span class="avatar">DM</span><span class="header-name">Demo</span></div></div></header>`;
-  }
+ const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
+ const label=current==='dashboard'?'Overview':titles[current];
+ return `<header class="header"><div class="header-left">
+  <button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button>
+  <button class="workspace-switch" data-nav="settings" title="Definições da empresa"><strong>stockcontrol.app</strong>${icon('chevron-down',14)}</button>
+  <span class="header-product">${E(label)} <span class="header-count">${num(stockView.total)} referências</span></span></div>
+  <div class="header-actions"><div class="top-search">${icon('search',18)}<input id="global-search" placeholder="Pesquisar material...  Ctrl K" aria-label="Pesquisa global" value="${E(search)}"></div>
+  <button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',20)}</button>
+  <button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button>
+  <button class="header-user" data-nav="settings" title="Perfil demonstrativo"><span class="header-name">Equipa Demo</span><span class="avatar">DM</span><span class="user-dot"></span></button></div></header>`;
+}
   function pageHeader(eyebrow,title,subtitle,actions=''){
     return `<div class="page-head"><div><span class="eyebrow">${E(eyebrow)}</span><h1>${E(title)}</h1><p>${E(subtitle)}</p></div>${actions?`<div class="page-actions">${actions}</div>`:''}</div>`;
   }
@@ -158,18 +170,98 @@
     return `<tr><td>${matLabel(m)}</td><td>${E(m.category)}</td><td class="text-right"><b>${num(m.stock)} ${E(m.unit)}</b></td><td class="text-right">${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td class="text-right"><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver ${E(m.name)}">${icon('chevron-right',18)}</button></td></tr>`;
   }
   const lows=()=>workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível').sort((a,b)=>(stockView.availableBySku.get(a.sku)-stockView.availableBySku.get(b.sku)));
+  function stockTrendChart(){
+ const values=workspace.materials.slice(0,9).map(m=>({
+  label:m.sku.replace('MAT-',''),
+  physical:Number(m.stock)||0,
+  free:Number(stockView.availableBySku.get(m.sku))||0
+ }));
+ const max=Math.max(1,...values.map(v=>v.physical),...values.map(v=>v.free));
+ const vbW=840,vbH=225,left=46,top=15,right=20,bottom=34;
+ const innerW=vbW-left-right,innerH=vbH-top-bottom;
+ const xx=i=>left+innerW*(values.length<2?0.5:i/(values.length-1));
+ const yy=v=>top+innerH*(1-v/max);
+ const pathFor=key=>values.map((m,i)=>`${i?'L':'M'}${xx(i).toFixed(1)} ${yy(m[key]).toFixed(1)}`).join(' ');
+ const grid=[0,.25,.5,.75,1].map(v=>`<g><line x1="${left}" y1="${(top+innerH*(1-v)).toFixed(1)}" x2="${vbW-right}" y2="${(top+innerH*(1-v)).toFixed(1)}" class="chart-grid"/><text x="3" y="${(top+innerH*(1-v)+4).toFixed(1)}" class="chart-axis">${num(Math.round(max*v))}</text></g>`).join('');
+ const ticks=values.map((v,i)=>`<text x="${xx(i)}" y="${vbH-8}" text-anchor="middle" class="chart-axis">${E(v.label)}</text>`).join('');
+ const series=chartSeries==='free'?[['free','free']]:chartSeries==='physical'?[['physical','physical']]:[['physical','physical'],['free','free']];
+ const lines=series.map(([key,cls])=>`<path d="${pathFor(key)}" class="chart-line ${cls}"/>${values.map((v,i)=>`<circle class="chart-point ${cls}" cx="${xx(i)}" cy="${yy(v[key])}" r="3.1"><title>${E(v.label)}: ${num(v[key])}</title></circle>`).join('')}`).join('');
+ return `<svg class="stock-chart" viewBox="0 0 ${vbW} ${vbH}" role="img" aria-label="Comparação do stock físico e disponível para ${values.length} materiais"><g>${grid}${ticks}</g>${lines}</svg>`;
+}
+
+  function stockDonut(){
+ const total=workspace.materials.length||1;
+ const ok=stockView.total-stockView.low-stockView.out-stockView.blocked;
+ const pct=100*Math.max(0,ok)/total;
+ return `<div class="donut-wrap"><svg class="stock-donut" viewBox="0 0 172 172" role="img" aria-label="${num(ok)} de ${num(stockView.total)} materiais acima do mínimo">
+  <circle cx="86" cy="86" r="64" fill="none" stroke="var(--sc-surface-alt)" stroke-width="20"/>
+  <circle cx="86" cy="86" r="64" fill="none" stroke="var(--sc-lavender)" stroke-width="20" stroke-dasharray="${(402.1239*pct/100).toFixed(2)} 402.124" stroke-linecap="round" transform="rotate(-90 86 86)"/>
+  <circle cx="86" cy="86" r="43" fill="var(--sc-bg)"/>
+  <text x="86" y="82" text-anchor="middle" class="donut-number">${num(Math.round(pct))}%</text>
+  <text x="86" y="100" text-anchor="middle" class="donut-label">saudável</text>
+ </svg><span class="donut-spark">✦</span></div>`;
+}
+
+  function riskBars(){
+ const materials=workspace.materials.slice(0,6),max=Math.max(1,...materials.map(m=>m.stock));
+ return `<div class="risk-bars">${materials.map(m=>`<div class="risk-bar" title="${E(m.name)}: ${num(m.stock)} ${E(m.unit)} físicos"><div class="risk-track"><span class="${stockView.statusBySku.get(m.sku)==='Disponível'?'bar-lime':'bar-lavender'}" style="height:${Math.max(2,100*m.stock/max).toFixed(1)}%"></span></div><small>${E(m.sku.replace('MAT-',''))}</small></div>`).join('')}</div>`;
+}
+
+  function activityAside(){
+ const recent=workspace.events.slice(0,5);
+ const state=stockView;
+ return `<aside class="right-insights" aria-label="Equipa e atividade">
+   <section class="insight-section"><div class="insight-heading"><h2>Equipa</h2><span class="insight-menu">${icon('more-horizontal',18)}</span></div>
+   <p class="insight-subtitle">Ambiente de inventário industrial e operações locais</p>
+   <div class="avatar-stack">${workspace.users.slice(0,4).map((u,i)=>`<span class="people-avatar avatar-${i%4}" title="${E(u.name)}">${E(u.name.split(' ').map(t=>t[0]).slice(0,2).join(''))}</span>`).join('')}<span class="people-count">+${Math.max(0,workspace.users.length-4)}</span></div></section>
+   <section class="insight-section"><div class="insight-heading"><h2>Últimas ações</h2><button class="icon-btn insight-settings" data-nav="reports" title="Ver auditoria">${icon('filter',17)}</button></div>
+   <div class="aside-timeline">${recent.length?recent.map((ev,i)=>`<div class="timeline-line"><span class="timeline-dot dot-${i%3}"></span><div><b>${E(ev.action)}</b><small>${day(ev.createdAt)}</small></div></div>`).join(''):`<div class="aside-empty">Sem ações registadas.</div>`}</div>
+   <button class="aside-button" data-nav="reports">Ver todas as ações</button></section>
+   <section class="insight-section insight-bottom"><div class="aside-illustration" aria-hidden="true"><span>✦</span></div><div class="insight-kicker">ESTADO ATUAL</div>
+   <h3>${num(state.total-state.low-state.out-state.blocked)} materiais disponíveis</h3><p>Contagem calculada a partir do inventário local.</p></section>
+  </aside>`;
+}
+
+  function componentCatalog(){
+ return `${pageHeader('SISTEMA VISUAL','Design system','Todos os componentes do StockControl usam os mesmos tokens, dimensões e estados.')}
+ <section class="panel design-catalog"><div class="panel-head"><div><h2>Cores e superfícies</h2><p>Tokens canónicos partilhados por todos os ecrãs</p></div></div>
+ <div class="swatch-grid">${[['--sc-bg','Base escura'],['--sc-surface','Superfície'],['--sc-line','Divisórias'],['--sc-lavender','Lilás'],['--sc-lime','Lima'],['--sc-muted','Texto secundário'],['--sc-danger','Erro'],['--sc-backdrop','Exterior']].map(([color,title])=>`<div class="swatch"><div class="swatch-color" style="background:var(${color})"></div><strong>${E(title)}</strong><code>${E(color)}</code></div>`).join('')}</div></section>
+ <section class="panel design-catalog"><div class="panel-head"><div><h2>Botões e estados</h2><p>Primitivos reutilizados em toda a aplicação</p></div></div><div class="demo-components">
+ ${button(`${icon('plus',16)} Novo movimento`,'new-movement','primary')}
+ ${button(`${icon('download',16)} Exportar CSV`,'export-inventory','secondary')}
+ ${button('Detalhes','go-inventory','plain')}
+ ${button('Desativado','unused','secondary',true)}
+ <button class="icon-btn" data-action="notifications" aria-label="Notificações">${icon('bell',18)}</button></div>
+ <div class="demo-components">${pill('Disponível')}${pill('Stock baixo')}${pill('Sem disponibilidade')}${pill('Concluída')}${pill('Esgotado')}</div></section>
+ <section class="panel design-catalog"><div class="panel-head"><div><h2>Formulários e filtros</h2><p>Inputs, selects, tabs e controlo de foco</p></div></div>
+ <div class="demo-components form-showcase"><label>Material<input class="field" value="Conector M12" aria-label="Material de exemplo" readonly></label>
+ <label>Categoria<select class="field" aria-label="Categoria de exemplo"><option>Elétrico</option><option>Metais</option></select></label>
+ <label>Quantidade<input class="field" type="number" value="24" aria-label="Quantidade de exemplo" readonly></label></div>
+ <div class="filters">${['Todos','Disponível','Reservado'].map((v,i)=>`<button type="button" class="filter-btn ${designFilter===v?'active':''}" aria-pressed="${designFilter===v}" data-action="demo-filter" data-demo="${v}">${v}</button>`).join('')}</div><p class="catalog-selection" role="status">Estado selecionado: ${E(designFilter)}</p></section>
+ <section class="panel design-catalog"><div class="panel-head"><div><h2>Tabelas e dados</h2><p>O mesmo componente utilizado em inventário e relatórios</p></div></div>
+ ${table(['Material','Categoria','Stock atual','Disponível','Estado',''],workspace.materials.slice(0,3).map(inventoryRow).join(''))}</section>`;
+}
   function dashboard(){
-    const s=stockView;
-    const recent=workspace.movements.slice(0,5);
-    const alerts=lows().slice(0,5);
-    const attention=alerts.length?alerts.map(m=>`<div class="attention-item"><div class="attention-ico">${icon('alert-triangle',17)}</div><span><b>${E(m.name)}</b><small>${E(m.sku)} · disponíveis ${num(stockView.availableBySku.get(m.sku))} / mín. ${num(m.min)} ${E(m.unit)}</small></span>${pill(stockView.statusBySku.get(m.sku))}</div>`).join(''):empty('Sem alertas','Todos os materiais acima do mínimo.');
-    return `${pageHeader('CENTRO DE OPERAÇÕES','Bom dia, equipa','Uma visão consolidada da operação — dados locais de demonstração.',button(`${icon('download')} Exportar inventário`,'export-inventory','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
-      <div class="section-caption"><b>RESUMO DA OPERAÇÃO</b><span>Valores calculados a partir dos ${s.total} materiais desta demo</span></div>
-      <div class="stats-grid">${stat('Referências registadas',num(s.total),'Materiais no catálogo','package')}${stat('Stock baixo',num(s.low),'Disponível abaixo do mínimo','alert-triangle','amber')}${stat('Sem disponibilidade',num(s.out+s.blocked),'Esgotados ou totalmente reservados','box','rose')}${stat('Reservas ativas',num(s.active),'Quantidade alocada a ordens','layers','violet')}</div>
-      <div class="two-col"><section class="panel"><div class="panel-head"><div><h2>Materiais que precisam de atenção</h2><p>Prioridade de reposição</p></div>${button('Abrir inventário','go-inventory','plain')}</div><div class="attention-list">${attention}</div></section>
-      <section class="panel"><div class="panel-head"><div><h2>Atividade recente</h2><p>Histórico local desta demonstração</p></div>${icon('clock')}</div><div class="activity-list">${recent.length?recent.map(m=>`<div class="activity-item"><span class="activity-ico ${m.type==='Saída'?'amber':'green'}">${icon(m.type==='Saída'?'arrow-down-right':'arrow-up-right',19)}</span><div><b>${E(m.type)} · ${E(getMat(m.sku)?.name||m.sku)}</b><small>${num(m.qty)} ${E(getMat(m.sku)?.unit||'')} · ${E(m.actor)}</small></div><time>${day(m.createdAt)}</time></div>`).join(''):empty('Sem movimentos','Regista a primeira entrada ou saída.','arrow-left-right')}</div></section></div>
-      <section class="panel"><div class="panel-head"><div><h2>Catálogo de materiais</h2><p>Referências mais relevantes para acompanhar</p></div>${button('Ver todos','go-inventory','secondary small')}</div>${table(['Material','Categoria','Stock atual','Disponível','Estado',''],workspace.materials.slice(0,5).map(inventoryRow).join(''))}</section>`;
-  }
+ const s=stockView;
+ const alerts=lows().slice(0,6);
+ const available=s.total-s.low-s.out-s.blocked;
+ return `<div class="dashboard-page">
+   <div class="dashboard-title"><div><span class="eyebrow">CONTROLO INDUSTRIAL · OFFLINE</span><h1>Overview</h1><p class="dashboard-subtitle">Materiais, níveis de risco e últimas operações</p></div>
+   ${button(`${icon('plus',17)} Novo movimento`,'new-movement','primary')}</div>
+   <section class="panel dashboard-chart-panel"><div class="dashboard-panel-head"><div><h2>Stock trend</h2><p class="dashboard-subtitle">Stock físico e livre por referência · dados locais</p></div>
+    <div class="segmented" role="group" aria-label="Séries do gráfico"><button type="button" data-series="both" class="${chartSeries==='both'?'active':''}" aria-pressed="${chartSeries==='both'}">Ambos</button><button type="button" data-series="physical" class="${chartSeries==='physical'?'active':''}" aria-pressed="${chartSeries==='physical'}">Físico</button><button type="button" data-series="free" class="${chartSeries==='free'?'active':''}" aria-pressed="${chartSeries==='free'}">Livre</button></div></div>
+    <div class="chart-legend"><span><i class="legend-dot"></i> Stock físico</span><span><i class="legend-dot lime"></i> Disponível após reservas</span></div>
+    ${stockTrendChart()}
+   </section>
+   <section class="panel"><div class="dashboard-panel-head"><h2>Risk founds and stock health</h2><div class="segment-caption">Dados atualizados a partir do inventário</div></div>
+    <div class="dashboard-risk-summary"><div class="risk-overview">${stockDonut()}<div class="risk-metrics"><div><small>Total de materiais</small><strong>${num(s.total)} <em>100%</em></strong></div><div><small>Materiais em atenção</small><strong>${num(s.low+s.out+s.blocked)} <em>${num(Math.round((s.low+s.out+s.blocked)/Math.max(1,s.total)*100))}%</em></strong></div></div></div>${riskBars()}</div>
+   </section>
+   <section class="panel dashboard-alerts"><div class="panel-head"><div><h2>Risk vulnerabilities</h2><p>Materiais abaixo do mínimo, esgotados ou totalmente reservados</p></div>${button('Ver inventário','go-inventory','plain')}</div>
+    <div class="dashboard-alert-table">${alerts.length?table(['Risco','Material','Referência','Livre','Estado',''],alerts.map(m=>`<tr><td>${pill(stockView.statusBySku.get(m.sku)==='Stock baixo'?'Stock baixo':'Sem disponibilidade')}</td><td>${E(m.name)}</td><td>${E(m.sku)}</td><td>${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver material">${icon('chevron-down',16)}</button></td></tr>`).join('')):empty('Sem risco','Todos os materiais têm stock suficiente.','check')}</div>
+   </section>
+   <div class="dashboard-bottom-actions">${button(`${icon('download',17)} Exportar inventário`,'export-inventory','secondary')}${button(`${icon('layers',17)} Reservas`,'go-reservations','secondary')}</div>
+ </div>`;
+}
   function inventory(){
     const s=stockView;
     const cats=['Todos',...new Set(workspace.materials.map(m=>m.category))];
@@ -249,10 +341,10 @@
   function website(){
     return `<div class="web-hero"><div><span class="eyebrow">STOCKCONTROL · PLATAFORMA PARA EQUIPAS DE PRODUÇÃO</span><h1>O teu inventário.<br><em>Sob controlo.</em></h1><p>Materiais, reservas, movimentos, contagens e relatórios num único espaço organizado. Uma experiência moderna, pensada para a fábrica.</p><div class="web-buttons">${button('Explorar workspace','go-dashboard','primary')}${button('Ver inventário','go-inventory','secondary')}</div><span class="web-disclaimer">Pré-visualização local, sem autenticação nem operações reais</span></div><div class="web-preview"><div class="preview-kicker">Visão geral <span class="tag">DEMO</span></div><div class="web-card-grid"><div><span>Referências</span><strong>${M.summary(workspace).total}</strong></div><div><span>Reservas ativas</span><strong>${M.summary(workspace).active}</strong></div></div><div class="mock-chart"><span style="height:54%"></span><span style="height:76%"></span><span style="height:61%"></span><span style="height:92%"></span><span style="height:81%"></span><span style="height:100%"></span><span style="height:73%"></span></div></div></div><div class="feature-grid">${[['package','Inventário','Stock, mínimos, categorias e localizações.'],['layers','Planeamento','Reservas ligadas a ordens de produção.'],['clipboard-check','Rastreabilidade','Contagens, aprovações e histórico de operações.']].map(([i,t,d])=>`<article class="feature-card">${icon(i,24)}<h3>${t}</h3><p>${d}</p></article>`).join('')}</div>`;
   }
-  const pages={dashboard,inventory,movements,reservations,counts,documents,reports,team,settings,billing,website};
+  const pages={dashboard,inventory,movements,reservations,counts,documents,reports,team,settings,billing,website,design:componentCatalog,...additionalPages};
   function render(){
     stockView=M.inventoryView(workspace);
-    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V5 Offline · Dados locais no navegador · Sem API ou pagamentos reais</footer></main></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
+    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<div class="body-columns"><main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V6 Reference Dark · Dados locais · Sem API ou pagamentos reais</footer></main>${activityAside()}</div></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
     const sortControl=document.getElementById('inventory-sort');
     if(sortControl)sortControl.value=inventorySort;
   }
@@ -450,6 +542,8 @@
       case'prev-inventory':inventoryPage--;render();break;
       case'next-inventory':inventoryPage++;render();break;
       case'go-inventory':navigate('inventory');break;
+      case'go-reservations':navigate('reservations');break;
+      case'demo-filter':designFilter=data.demo||'Todos';render();break;
       case'go-inventory-search':navigate('inventory');document.getElementById('inventory-search')?.focus();break;
       case'go-dashboard':navigate('dashboard');break;
       case'detail':detail(data.sku);break;
@@ -501,10 +595,11 @@
     if(event.target.id==='backup-input'){void restoreBackup(event.target.files?.[0]);event.target.value='';}
   });
   document.addEventListener('click',event=>{
-    const b=event.target.closest('[data-category],[data-movfilter]');
+    const b=event.target.closest('[data-category],[data-movfilter],[data-series]');
     if(!b)return;
     if(b.dataset.category){category=b.dataset.category;inventoryPage=1;render()}
     if(b.dataset.movfilter){movementFilter=b.dataset.movfilter;render()}
+    if(b.dataset.series){chartSeries=b.dataset.series;render()}
   });
   document.addEventListener('keydown',event=>{
     if(event.key==='Enter'&&event.target.id==='global-search'){

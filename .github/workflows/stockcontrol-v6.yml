@@ -1,0 +1,76 @@
+name: StockControl V6 Reference Dark
+on:
+  pull_request:
+    paths:
+      - 'portal_php/public/assets/design-v5/**'
+      - 'tests/stockcontrol_v5_*'
+      - 'tests/stockcontrol_v6_*'
+      - '.github/workflows/stockcontrol-v6.yml'
+  push:
+    branches: ['feat/stockcontrol-v6-reference-dark']
+    paths:
+      - 'portal_php/public/assets/design-v5/**'
+      - 'tests/stockcontrol_v5_*'
+      - 'tests/stockcontrol_v6_*'
+      - '.github/workflows/stockcontrol-v6.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-and-tokens:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify deterministic nine-module bundle
+        run: node portal_php/public/assets/design-v5/tools/build.cjs --check
+      - name: Check JavaScript syntax
+        run: |
+          node --check portal_php/public/assets/design-v5/app.js
+          node --check portal_php/public/assets/design-v5/model.js
+          node --check portal_php/public/assets/design-v5/backup.js
+          node --check tests/stockcontrol_v6_theme.test.cjs
+      - name: Run domain regression and design tokens
+        run: node --test tests/stockcontrol_v5_model.test.cjs tests/stockcontrol_v6_theme.test.cjs
+  screenshot-and-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install Chromium for regression and visual inspection
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Verify all screens, common tokens and interactions
+        run: node --test tests/stockcontrol_v5_browser.cjs
+      - name: Export actual rendered screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-v6-reference-dark-previews
+          path: tests/v5-previews/
+          if-no-files-found: ignore
+          retention-days: 14
+  scaffold-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Generate new page and reusable component
+        run: |
+          node portal_php/public/assets/design-v5/tools/scaffold.cjs page "Inspeções"
+          node portal_php/public/assets/design-v5/tools/scaffold.cjs component "Cartao de estado"
+      - name: Verify generated component inherits V6 design
+        run: |
+          node portal_php/public/assets/design-v5/tools/build.cjs --check
+          node --check portal_php/public/assets/design-v5/app.js
+          grep -q 'additionalPages\["inspecoes"\]' portal_php/public/assets/design-v5/app.js
+          grep -q 'component_cartao_de_estado' portal_php/public/assets/design-v5/app.js
+          grep -q 'class="panel"' portal_php/public/assets/design-v5/src/pages/inspecoes.jsfrag
+          grep -q 'class="stat-card sc-component"' portal_php/public/assets/design-v5/src/components/cartao-de-estado.jsfrag
