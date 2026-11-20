@@ -1,10 +1,10 @@
   function render(){
     stockView=M.inventoryView(workspace);
-    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V4 Workspace · Dados fictícios locais · Sem API, autenticação ou pagamentos reais</footer></main></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
+    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V5 Offline · Dados locais no navegador · Sem API ou pagamentos reais</footer></main></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
   }
   function navigate(page){
     if(!pages[page])return;
-    current=page;mobileMenu=false;search='';category='Todos';
+    current=page;mobileMenu=false;search='';category='Todos';inventoryPage=1;
     if(location.hash.slice(1)!==page)history.replaceState(null,'','#'+page);
     render();
     window.scrollTo({top:0,behavior:'auto'});
