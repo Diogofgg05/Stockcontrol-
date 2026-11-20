@@ -1,15 +1,24 @@
   function sidebar(){
-    return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
-      <div class="brand"><div class="brand-logo">${icon('box',24)}</div><div><strong>stockcontrol<span>.</span></strong><small>WORKSPACE INDUSTRIAL</small></div><button class="sidebar-x" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
-      <div class="workspace-switch"><div class="workspace-avatar">F</div><div><strong>Fábrica Demo</strong><small>Ambiente local · ficção</small></div>${icon('chevron-down',16)}</div>
-      <div class="side-links">${menuGroups.map(group=>`<div class="side-group"><span class="side-label">${group.label}</span>${group.links.map(([key,ic])=>`<button data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic)}<span>${E(titles[key])}</span>${key==='inventory'&&stockView.low+stockView.out+stockView.blocked>0?`<b class="side-count">${stockView.low+stockView.out+stockView.blocked}</b>`:''}</button>`).join('')}</div>`).join('')}</div>
-      <div class="sidebar-bottom"><div class="side-note">${icon('shield-check',20)}<strong>Ambiente de demonstração</strong><span>Sem ligação à base de dados ou API real.</span></div><button class="side-account" data-nav="settings"><span class="avatar">DM</span><span><b>Equipa de demonstração</b><small>Papel: ${E(role)}</small></span>${icon('chevron-right',16)}</button></div>
-    </aside>`;
-  }
+ return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
+  <div class="brand"><button type="button" class="brand-logo" data-nav="dashboard" title="StockControl" aria-label="Ir para visão geral"><span class="brand-mark"><i></i><i></i><i></i></span></button><button class="sidebar-x icon-btn" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
+  <nav class="side-links" aria-label="Áreas do StockControl">
+  ${menuGroups.map(g=>`<div class="side-group">${g.links.map(([key,ic])=>`<button title="${E(titles[key])}" aria-label="${E(titles[key])}" data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic,20)}<span class="rail-tooltip">${E(titles[key])}</span>${key==='inventory'&&stockView.low+stockView.out+stockView.blocked>0?`<b class="side-count">${stockView.low+stockView.out+stockView.blocked}</b>`:''}</button>`).join('')}</div>`).join('')}
+  </nav>
+  <div class="sidebar-bottom"><button title="Definições" aria-label="Definições" class="side-account ${current==='settings'?'active':''}" data-nav="settings">${icon('settings',21)}</button></div>
+ </aside>`;
+}
   function header(){
-    const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
-    return `<header class="header"><div class="header-left"><button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button><span class="crumb">Workspace</span>${icon('chevron-right',15)}<strong>${E(titles[current])}</strong></div><div class="header-actions"><div class="top-search">${icon('search',17)}<input id="global-search" placeholder="Pesquisar materiais...  ⌘K" aria-label="Pesquisa global" value="${E(search)}"></div><button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',19)}</button><button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button><div class="header-user"><span class="avatar">DM</span><span class="header-name">Demo</span></div></div></header>`;
-  }
+ const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
+ const label=current==='dashboard'?'Overview':titles[current];
+ return `<header class="header"><div class="header-left">
+  <button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button>
+  <button class="workspace-switch" data-nav="settings" title="Definições da empresa"><strong>stockcontrol.app</strong>${icon('chevron-down',14)}</button>
+  <span class="header-product">${E(label)} <span class="header-count">${num(stockView.total)} referências</span></span></div>
+  <div class="header-actions"><div class="top-search">${icon('search',18)}<input id="global-search" placeholder="Pesquisar material...  Ctrl K" aria-label="Pesquisa global" value="${E(search)}"></div>
+  <button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',20)}</button>
+  <button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button>
+  <button class="header-user" data-nav="settings" title="Perfil demonstrativo"><span class="header-name">Equipa Demo</span><span class="avatar">DM</span><span class="user-dot"></span></button></div></header>`;
+}
   function pageHeader(eyebrow,title,subtitle,actions=''){
     return `<div class="page-head"><div><span class="eyebrow">${E(eyebrow)}</span><h1>${E(title)}</h1><p>${E(subtitle)}</p></div>${actions?`<div class="page-actions">${actions}</div>`:''}</div>`;
   }
