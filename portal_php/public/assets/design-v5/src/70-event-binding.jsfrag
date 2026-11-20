@@ -30,10 +30,11 @@
     if(event.target.id==='backup-input'){void restoreBackup(event.target.files?.[0]);event.target.value='';}
   });
   document.addEventListener('click',event=>{
-    const b=event.target.closest('[data-category],[data-movfilter]');
+    const b=event.target.closest('[data-category],[data-movfilter],[data-series]');
     if(!b)return;
     if(b.dataset.category){category=b.dataset.category;inventoryPage=1;render()}
     if(b.dataset.movfilter){movementFilter=b.dataset.movfilter;render()}
+    if(b.dataset.series){chartSeries=b.dataset.series;render()}
   });
   document.addEventListener('keydown',event=>{
     if(event.key==='Enter'&&event.target.id==='global-search'){
