@@ -12,7 +12,7 @@
   ];
   const demo = () => ({
     id:'demo',name:'Fábrica Demo',materials:seed.map(m=>({...m})),
-    reservations:[{id:'RS-001',sku:'MAT-001',qty:30,order:'OP-104',status:'Ativa',createdAt:'2026-11-19T10:10:00.000Z'},{id:'RS-002',sku:'MAT-007',qty:15,order:'OP-105',status:'Ativa',createdAt:'2026-11-19T11:10:00.000Z'}],
+    reservations:[{id:'RS-001',sku:'MAT-001',qty:30,consumed:0,order:'OP-104',status:'Ativa',createdAt:'2026-11-19T10:10:00.000Z'},{id:'RS-002',sku:'MAT-007',qty:15,consumed:0,order:'OP-105',status:'Ativa',createdAt:'2026-11-19T11:10:00.000Z'}],
     movements:[{id:'MV-001',sku:'MAT-001',type:'Entrada',qty:120,createdAt:'2026-11-19T09:42:00.000Z',actor:'Equipa demo'},{id:'MV-002',sku:'MAT-002',type:'Saída',qty:36,createdAt:'2026-11-19T09:18:00.000Z',actor:'Equipa demo'}],
     counts:[],events:[{id:'EV-001',action:'Ambiente de demonstração iniciado',actor:'Sistema',createdAt:'2026-11-19T09:00:00.000Z'}],
     documents:[],users:[{name:'Ana Silva',role:'Administrador',state:'Ativo'},{name:'Bruno Costa',role:'Operador',state:'Ativo'},{name:'Carla Reis',role:'Auditor',state:'Ativo'}]
@@ -26,8 +26,28 @@
       Number.isSafeInteger(Math.round(n*1000)) && Math.abs(n*1000-Math.round(n*1000))<1e-7;
   };
   const roundQty = n => Math.round(n*1000)/1000;
+  function reservationRemaining(r){
+    if(!r||r.status!=='Ativa')return 0;
+    return Math.max(0,roundQty(Number(r.qty)-Number(r.consumed??0)));
+  }
   function reserved(sku,reservations){
-    return roundQty(reservations.filter(r=>r.sku===sku&&r.status==='Ativa').reduce((sum,r)=>sum+Number(r.qty),0));
+    return roundQty(reservations.filter(r=>r.sku===sku).reduce((sum,r)=>sum+reservationRemaining(r),0));
+  }
+  // Planeamento puro: o chamador só aplica as alterações após validação.
+  // Consumir uma reserva reduz stock físico e saldo reservado na mesma quantidade.
+  function planConsumption(m,r,amount,reservations){
+    if(!m||!r||r.sku!==m.sku)throw Error('Reserva ou material inexistente.');
+    if(r.status!=='Ativa')throw Error('A reserva já não está ativa.');
+    if(!positiveQty(amount))throw Error('Indica uma quantidade positiva válida.');
+    const remaining=reservationRemaining(r),qty=Number(amount);
+    if(qty>remaining)throw Error('O consumo ultrapassa o saldo reservado.');
+    if(qty>m.stock)throw Error('Stock físico insuficiente.');
+    const stock=roundQty(m.stock-qty);
+    const consumed=roundQty(Number(r.consumed??0)+qty);
+    const status=consumed===r.qty?'Concluída':'Ativa';
+    if(roundQty(stock-(reserved(m.sku,reservations)-qty))<0)
+      throw Error('O consumo compromete outras reservas.');
+    return {stock,consumed,status,used:qty,remaining:roundQty(r.qty-consumed)};
   }
   function available(m,reservations){return Math.max(0,roundQty(m.stock-reserved(m.sku,reservations)))}
   function positiveQty(value){return preciseQty(value)}
@@ -75,11 +95,19 @@
     if(!refs(w.reservations)||!refs(w.movements)||!refs(w.counts))return false;
     const unique = entries => new Set(entries.map(x=>x.id)).size===entries.length;
     if(![w.reservations,w.movements,w.counts,w.events,w.documents].every(unique))return false;
-    if(!w.reservations.every(r=>validString(r.order,40)&&typeof r.qty==='number'&&preciseQty(r.qty)&&['Ativa','Cancelada'].includes(r.status)))return false;
-    if(!w.movements.every(m=>typeof m.qty==='number'&&preciseQty(m.qty)&&['Entrada','Saída','Devolução','Ajuste'].includes(m.type)
+    if(!w.reservations.every(r=>{
+      const consumed=r.consumed??0; // Compatibilidade com dados da primeira V4.
+      return validString(r.order,40)&&typeof r.qty==='number'&&preciseQty(r.qty)
+        &&typeof consumed==='number'&&preciseQty(consumed,true)&&consumed<=r.qty
+        &&['Ativa','Cancelada','Concluída'].includes(r.status)
+        &&(r.status==='Concluída'?consumed===r.qty:r.status!=='Ativa'||consumed<r.qty);
+    }))return false;
+    if(!w.movements.every(m=>typeof m.qty==='number'&&preciseQty(m.qty)&&['Entrada','Saída','Devolução','Ajuste','Consumo'].includes(m.type)
       &&validString(m.actor,100)&&(!m.note||typeof m.note==='string'&&m.note.length<=250)
       &&(m.type!=='Ajuste'||typeof m.delta==='number'&&Number.isFinite(m.delta)&&m.delta!==0
-        &&preciseQty(Math.abs(m.delta))&&roundQty(Math.abs(m.delta))===m.qty)))return false;
+        &&preciseQty(Math.abs(m.delta))&&roundQty(Math.abs(m.delta))===m.qty)
+      &&(m.type!=='Consumo'||validId(m.reservationId)&&m.delta===-m.qty
+        &&w.reservations.some(r=>r.id===m.reservationId&&r.sku===m.sku))))return false;
     if(!w.counts.every(c=>typeof c.expected==='number'&&typeof c.counted==='number'&&preciseQty(c.expected,true)&&preciseQty(c.counted,true)
       &&['Pendente','Aplicada','Rejeitada'].includes(c.status)))return false;
     if(!w.documents.every(d=>d&&validId(d.id)&&validString(d.name,120)
@@ -100,7 +128,7 @@
   }
   function toCsv(rows,headers){return '\ufeff'+[headers,...rows].map(row=>row.map(csvCell).join(';')).join('\r\n')+'\r\n'}
   function normalizedSku(v){return String(v||'').trim().toUpperCase()}
-  const api={demo,status,reserved,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
+  const api={demo,status,reserved,reservationRemaining,planConsumption,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(typeof window!=='undefined')window.StockModel=api;
 })();
