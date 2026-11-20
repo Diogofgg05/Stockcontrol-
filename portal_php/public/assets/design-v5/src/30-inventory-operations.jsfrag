@@ -1,15 +1,24 @@
   function dashboard(){
-    const s=stockView;
-    const recent=workspace.movements.slice(0,5);
-    const alerts=lows().slice(0,5);
-    const attention=alerts.length?alerts.map(m=>`<div class="attention-item"><div class="attention-ico">${icon('alert-triangle',17)}</div><span><b>${E(m.name)}</b><small>${E(m.sku)} · disponíveis ${num(stockView.availableBySku.get(m.sku))} / mín. ${num(m.min)} ${E(m.unit)}</small></span>${pill(stockView.statusBySku.get(m.sku))}</div>`).join(''):empty('Sem alertas','Todos os materiais acima do mínimo.');
-    return `${pageHeader('CENTRO DE OPERAÇÕES','Bom dia, equipa','Uma visão consolidada da operação — dados locais de demonstração.',button(`${icon('download')} Exportar inventário`,'export-inventory','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
-      <div class="section-caption"><b>RESUMO DA OPERAÇÃO</b><span>Valores calculados a partir dos ${s.total} materiais desta demo</span></div>
-      <div class="stats-grid">${stat('Referências registadas',num(s.total),'Materiais no catálogo','package')}${stat('Stock baixo',num(s.low),'Disponível abaixo do mínimo','alert-triangle','amber')}${stat('Sem disponibilidade',num(s.out+s.blocked),'Esgotados ou totalmente reservados','box','rose')}${stat('Reservas ativas',num(s.active),'Quantidade alocada a ordens','layers','violet')}</div>
-      <div class="two-col"><section class="panel"><div class="panel-head"><div><h2>Materiais que precisam de atenção</h2><p>Prioridade de reposição</p></div>${button('Abrir inventário','go-inventory','plain')}</div><div class="attention-list">${attention}</div></section>
-      <section class="panel"><div class="panel-head"><div><h2>Atividade recente</h2><p>Histórico local desta demonstração</p></div>${icon('clock')}</div><div class="activity-list">${recent.length?recent.map(m=>`<div class="activity-item"><span class="activity-ico ${m.type==='Saída'?'amber':'green'}">${icon(m.type==='Saída'?'arrow-down-right':'arrow-up-right',19)}</span><div><b>${E(m.type)} · ${E(getMat(m.sku)?.name||m.sku)}</b><small>${num(m.qty)} ${E(getMat(m.sku)?.unit||'')} · ${E(m.actor)}</small></div><time>${day(m.createdAt)}</time></div>`).join(''):empty('Sem movimentos','Regista a primeira entrada ou saída.','arrow-left-right')}</div></section></div>
-      <section class="panel"><div class="panel-head"><div><h2>Catálogo de materiais</h2><p>Referências mais relevantes para acompanhar</p></div>${button('Ver todos','go-inventory','secondary small')}</div>${table(['Material','Categoria','Stock atual','Disponível','Estado',''],workspace.materials.slice(0,5).map(inventoryRow).join(''))}</section>`;
-  }
+ const s=stockView;
+ const alerts=lows().slice(0,6);
+ const available=s.total-s.low-s.out-s.blocked;
+ return `<div class="dashboard-page">
+   <div class="dashboard-title"><div><span class="eyebrow">CONTROLO INDUSTRIAL · OFFLINE</span><h1>Overview</h1><p class="dashboard-subtitle">Materiais, níveis de risco e últimas operações</p></div>
+   ${button(`${icon('plus',17)} Novo movimento`,'new-movement','primary')}</div>
+   <section class="panel dashboard-chart-panel"><div class="dashboard-panel-head"><div><h2>Stock trend</h2><p class="dashboard-subtitle">Stock físico e livre por referência · dados locais</p></div>
+    <div class="segmented" role="group" aria-label="Séries do gráfico"><button type="button" data-series="both" class="${chartSeries==='both'?'active':''}" aria-pressed="${chartSeries==='both'}">Ambos</button><button type="button" data-series="physical" class="${chartSeries==='physical'?'active':''}" aria-pressed="${chartSeries==='physical'}">Físico</button><button type="button" data-series="free" class="${chartSeries==='free'?'active':''}" aria-pressed="${chartSeries==='free'}">Livre</button></div></div>
+    <div class="chart-legend"><span><i class="legend-dot"></i> Stock físico</span><span><i class="legend-dot lime"></i> Disponível após reservas</span></div>
+    ${stockTrendChart()}
+   </section>
+   <section class="panel"><div class="dashboard-panel-head"><h2>Risk founds and stock health</h2><div class="segment-caption">Dados atualizados a partir do inventário</div></div>
+    <div class="dashboard-risk-summary"><div class="risk-overview">${stockDonut()}<div class="risk-metrics"><div><small>Total de materiais</small><strong>${num(s.total)} <em>100%</em></strong></div><div><small>Materiais em atenção</small><strong>${num(s.low+s.out+s.blocked)} <em>${num(Math.round((s.low+s.out+s.blocked)/Math.max(1,s.total)*100))}%</em></strong></div></div></div>${riskBars()}</div>
+   </section>
+   <section class="panel dashboard-alerts"><div class="panel-head"><div><h2>Risk vulnerabilities</h2><p>Materiais abaixo do mínimo, esgotados ou totalmente reservados</p></div>${button('Ver inventário','go-inventory','plain')}</div>
+    <div class="dashboard-alert-table">${alerts.length?table(['Risco','Material','Referência','Livre','Estado',''],alerts.map(m=>`<tr><td>${pill(stockView.statusBySku.get(m.sku)==='Stock baixo'?'Stock baixo':'Sem disponibilidade')}</td><td>${E(m.name)}</td><td>${E(m.sku)}</td><td>${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver material">${icon('chevron-down',16)}</button></td></tr>`).join('')):empty('Sem risco','Todos os materiais têm stock suficiente.','check')}</div>
+   </section>
+   <div class="dashboard-bottom-actions">${button(`${icon('download',17)} Exportar inventário`,'export-inventory','secondary')}${button(`${icon('layers',17)} Reservas`,'go-reservations','secondary')}</div>
+ </div>`;
+}
   function inventory(){
     const s=stockView;
     const cats=['Todos',...new Set(workspace.materials.map(m=>m.category))];
