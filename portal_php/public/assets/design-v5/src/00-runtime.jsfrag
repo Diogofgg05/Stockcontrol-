@@ -1,7 +1,8 @@
 (function stockApp(){
   'use strict';
   const M=window.StockModel;
-  const STORE='stockcontrol:v4:demo:v1';
+  const STORE='stockcontrol:v5:offline:v1';
+  const OLD_STORE='stockcontrol:v4:demo:v1';
   const titles={dashboard:'Visão geral',inventory:'Inventário',movements:'Movimentos',reservations:'Reservas',counts:'Inventário físico',documents:'Documentos',reports:'Relatórios',team:'Equipa e permissões',settings:'Definições',billing:'Planos',website:'Website'};
   const menuGroups=[
     {label:'OPERAÇÕES',links:[['dashboard','layout-dashboard'],['inventory','package'],['movements','arrow-left-right'],['reservations','layers'],['counts','clipboard-check']]},
@@ -43,13 +44,18 @@
   const day=s=>{const d=new Date(s);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})};
   const now=()=>new Date().toISOString();
   const uuid=prefix=>prefix+'-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
-  const defaults=M.demo();
+  // Modulos ordenados: gerar app.js com tools/build.cjs.
   let persistedRaw=null;
   function load(){
     try{
       const raw=localStorage.getItem(STORE);
       persistedRaw=raw;
-      if(!raw)return M.demo();
+      if(!raw){
+        const legacy=localStorage.getItem(OLD_STORE);
+        if(!legacy)return M.demo();
+        const previous=JSON.parse(legacy);
+        return M.validateWorkspace(previous)?{...M.demo(),...previous,users:M.demo().users}:M.demo();
+      }
       const parsed=JSON.parse(raw);
       if(!M.validateWorkspace(parsed))return M.demo();
       return {...M.demo(),...parsed,users:M.demo().users};
@@ -57,6 +63,8 @@
   }
   let workspace=load();
   let current='dashboard',role='Administrador',search='',category='Todos',movementFilter='Todos',mobileMenu=false;
+  let inventorySort='sku',inventoryPage=1;
+  const PAGE_SIZE=8;
   let modalReturnFocus=null;
   let stockView=M.inventoryView(workspace);
   const host=document.getElementById('app');
