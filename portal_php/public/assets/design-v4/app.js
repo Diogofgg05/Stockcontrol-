@@ -149,7 +149,7 @@
   function movements(){
     const rows=workspace.movements.filter(m=>movementFilter==='Todos'||m.type===movementFilter);
     return `${pageHeader('RASTREABILIDADE','Movimentos','Entradas, saídas e devoluções com validação do stock disponível.',button(`${icon('download')} Exportar CSV`,'export-movements','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
-      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td><span class="movement-type ${r.type==='Saída'?'outflow':'inflow'}">${icon(r.type==='Saída'?'arrow-down-right':'arrow-up-right',14)} ${E(r.type)}</span></td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
+      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução','Ajuste'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td><span class="movement-type ${r.type==='Saída'||r.type==='Ajuste'&&r.delta<0?'outflow':'inflow'}">${icon(r.type==='Saída'||r.type==='Ajuste'&&r.delta<0?'arrow-down-right':'arrow-up-right',14)} ${E(r.type)}</span></td><td>${r.type==='Ajuste'&&r.delta>0?'+':''}${num(r.type==='Ajuste'?r.delta:r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
   }
   function reservations(){
     const rows=workspace.reservations;
@@ -166,7 +166,7 @@
   }
   function documents(){
     const rows=workspace.documents;
-    return `${pageHeader('FICHEIROS E COMPROVATIVOS','Documentos','Zona de demonstração para anexos, fichas técnicas e guias.',button(`${icon('upload-cloud')} Anexar ficheiro`,'new-document','primary'))}
+    return `${pageHeader('FICHEIROS E COMPROVATIVOS','Documentos','Zona de demonstração para anexos, fichas técnicas e guias.',button(`${icon('upload-cloud')} Registar ficheiro`,'new-document','primary'))}
       <div class="notice">${icon('info',18)} <span>Nesta versão os ficheiros não são enviados nem guardados: apenas o nome e metadados são adicionados à lista local. Não é armazenamento de documentos.</span></div>
       <section class="panel"><div class="panel-head"><div><h2>Ficheiros associados</h2><p>Pré-visualização do fluxo de documentos</p></div></div>
       ${rows.length?table(['Ficheiro','Categoria','Dimensão','Material associado','Adicionado'],rows.map(r=>`<tr><td><b>${E(r.name)}</b></td><td>${E(r.category)}</td><td>${num(r.sizeKb)} KB</td><td>${E(getMat(r.sku)?.name||'Geral')}</td><td>${day(r.createdAt)}</td></tr>`).join('')):empty('Nenhum documento','Anexa um ficheiro para testar a interface.','file-text')}</section>`;
@@ -247,8 +247,8 @@
       openModal('Nova contagem física','Regista a contagem; a aprovação será efetuada separadamente.',materialSelect(sku)+field('Quantidade contada','counted','number','0','min="0" step="0.001"'),'Guardar contagem','count');
     }else if(kind==='document'){
       if(!checkRole('document'))return;
-      openModal('Anexar ficheiro','Só o nome e dimensão serão registados; o conteúdo não é guardado.',`<label class="field-label">Ficheiro (PDF, PNG ou JPEG; até 5 MB)<input class="field" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" required></label>`+
-        `<label class="field-label">Categoria<select class="field" name="category"><option>Ficha técnica</option><option>Guia de remessa</option><option>Fotografia</option><option>Outro</option></select></label><label class="field-label">Material associado (opcional)<select class="field" name="sku"><option value="">Geral</option>${workspace.materials.map(m=>`<option value="${E(m.sku)}">${E(m.name)}</option>`).join('')}</select></label>`,'Adicionar metadados','document');
+      openModal('Registar metadados','Só o nome e dimensão serão registados; o conteúdo não é guardado.',`<label class="field-label">Ficheiro (PDF, PNG ou JPEG; até 5 MB)<input class="field" type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" required></label>`+
+        `<label class="field-label">Categoria<select class="field" name="category"><option>Ficha técnica</option><option>Guia de remessa</option><option>Fotografia</option><option>Outro</option></select></label><label class="field-label">Material associado (opcional)<select class="field" name="sku"><option value="">Geral</option>${workspace.materials.map(m=>`<option value="${E(m.sku)}">${E(m.name)}</option>`).join('')}</select></label>`,'Registar metadados','document');
     }
   }
   function submitForm(form){
@@ -262,7 +262,7 @@
         if(getMat(sku))throw Error('Já existe um material com esse SKU.');
         const name=String(fd.get('name')||'').trim(),categoryName=String(fd.get('category')||'').trim(),unit=String(fd.get('unit')||'').trim(),location=String(fd.get('location')||'').trim();
         const stock=M.assertCount({sku},fd.get('stock')),min=M.assertCount({sku},fd.get('min')),cost=Number(fd.get('cost'));
-        if(!name||!categoryName||!unit||!location||!Number.isFinite(cost)||cost<0)throw Error('Preenche corretamente os dados do material.');
+        if(!name||name.length>100||!categoryName||categoryName.length>40||!unit||unit.length>10||!location||location.length>36||!Number.isFinite(cost)||cost<0||cost>1000000000)throw Error('Preenche corretamente os dados do material.');
         workspace.materials.push({sku,name,category:categoryName,unit,stock,min,location,cost:Math.round(cost*100)/100});
         eventLog('Material criado: '+sku);
       }else if(kind==='movement'){
@@ -274,7 +274,7 @@
       }else if(kind==='reservation'){
         if(!checkRole('reserve'))return;
         const sku=fd.get('sku'),qty=Number(fd.get('qty')),order=String(fd.get('order')||'').trim();
-        if(!order)throw Error('Introduz uma ordem de produção.');
+        if(!order||order.length>40)throw Error('Introduz uma ordem de produção válida (até 40 caracteres).');
         M.assertReservation(getMat(sku),qty,workspace.reservations);
         workspace.reservations.unshift({id:uuid('RS'),sku,qty,order,status:'Ativa',createdAt:now()});
         eventLog('Reserva criada: '+order);
@@ -347,8 +347,9 @@
       headers=['SKU','Material','Categoria','Unidade','Stock','Reservado','Disponível','Mínimo','Localização','Custo unitário EUR'];
       rows=workspace.materials.map(m=>[m.sku,m.name,m.category,m.unit,m.stock,M.reserved(m.sku,workspace.reservations),M.available(m,workspace.reservations),m.min,m.location,m.cost]);name='stockcontrol-demo-inventario.csv';
     }else{
-      headers=['ID','Data','Material SKU','Tipo','Quantidade','Responsável','Observação'];
-      rows=workspace.movements.map(m=>[m.id,m.createdAt,m.sku,m.type,m.qty,m.actor,m.note||'']);name='stockcontrol-demo-movimentos.csv';
+      headers=['ID','Data','Material SKU','Tipo','Quantidade','Variação de stock','Responsável','Observação'];
+      rows=workspace.movements.map(m=>[m.id,m.createdAt,m.sku,m.type,m.qty,
+        m.type==='Ajuste'?m.delta:(m.type==='Saída'?-m.qty:m.qty),m.actor,m.note||'']);name='stockcontrol-demo-movimentos.csv';
     }
     const blob=new Blob([M.toCsv(rows,headers)],{type:'text/csv;charset=utf-8'});
     const href=URL.createObjectURL(blob),a=document.createElement('a');a.href=href;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);toast('CSV da demonstração exportado.');
