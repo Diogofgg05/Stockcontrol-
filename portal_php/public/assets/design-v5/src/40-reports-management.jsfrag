@@ -18,7 +18,10 @@
   function settings(){
     return `${pageHeader('PERSONALIZAÇÃO','Definições','Controlo do ambiente local e do papel de pré-visualização.')}
       <div class="two-col"><section class="panel"><div class="panel-head"><div><h2>Papel de demonstração</h2><p>Experimenta diferentes vistas e limites na interface</p></div></div><div class="settings-section"><label for="demo-role">Papel ativo</label><select id="demo-role" class="field">${['Administrador','Operador','Auditor'].map(r=>`<option ${r===role?'selected':''}>${r}</option>`).join('')}</select><p>O controlo é apenas visual; nunca substitui validações do servidor.</p></div></section>
-      <section class="panel"><div class="panel-head"><div><h2>Repor demonstração</h2><p>Reverter movimentos, reservas, contagens e materiais deste navegador</p></div></div><div class="settings-section"><p>Os dados de exemplo ficam em armazenamento local (localStorage). Não são sincronizados.</p>${button(`${icon('rotate-ccw')} Repor dados fictícios`,'reset-demo','danger-outline')}</div></section></div>`;
+      <section class="panel"><div class="panel-head"><div><h2>Repor demonstração</h2><p>Reverter movimentos, reservas, contagens e materiais deste navegador</p></div></div><div class="settings-section"><p>Os dados de exemplo ficam em armazenamento local (localStorage). Não são sincronizados.</p>${button(`${icon('rotate-ccw')} Repor dados fictícios`,'reset-demo','danger-outline')}</div></section></div>
+      <section class="panel"><div class="panel-head"><div><h2>Dados offline e backups</h2><p>Gestão autónoma no navegador sem API nem base de dados remota</p></div></div>
+      <div class="settings-section"><div class="data-actions">${button('Exportar backup JSON','backup-export','primary')}${button('Restaurar JSON','backup-import','secondary',!can('manage'))}</div>
+      <input id="backup-input" type="file" accept=".json,application/json" hidden><p class="backup-note">Backup sem encriptação: guarda o ficheiro num local seguro. O restauro substitui os dados atuais mediante confirmação.</p></div></section>`;
   }
   function billing(){
     return `${pageHeader('SUBSCRIÇÃO','Plano e faturação','Estrutura para futura integração Stripe, sem cobranças de demonstração.')}
