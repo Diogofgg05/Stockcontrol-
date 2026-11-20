@@ -1,0 +1,36 @@
+name: StockControl V4 demo checks
+on:
+  pull_request:
+    paths:
+      - 'portal_php/public/assets/design-v4/**'
+      - 'tests/stockcontrol_v4_model.test.cjs'
+      - '.github/workflows/stockcontrol-v4.yml'
+  push:
+    branches: [main, 'feat/stockcontrol-v4-workspace']
+    paths:
+      - 'portal_php/public/assets/design-v4/**'
+      - 'tests/stockcontrol_v4_model.test.cjs'
+      - '.github/workflows/stockcontrol-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax checks
+        run: |
+          node --check portal_php/public/assets/design-v4/model.js
+          node --check portal_php/public/assets/design-v4/app.js
+          node --check tests/stockcontrol_v4_model.test.cjs
+      - name: Inventory and frontend boundary tests
+        run: node --test tests/stockcontrol_v4_model.test.cjs
