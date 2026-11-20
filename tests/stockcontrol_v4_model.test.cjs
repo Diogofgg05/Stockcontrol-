@@ -159,3 +159,15 @@ test('código implementa rollback de erros de persistência e deteção de outra
   assert.match(js,/host\.inert=true/);
   assert.match(js,/function saveFeedback\(/);
 });
+
+test('ajuste inválido não passa validação do histórico',()=>{
+  const w=demo();
+  const a={id:'MV-ERR',sku:'MAT-001',type:'Ajuste',qty:7,delta:4,
+    actor:'Administrador (demo)',createdAt:new Date().toISOString()};
+  w.movements.push(a);
+  assert.equal(M.validateWorkspace(w),false,'delta tem de corresponder a quantidade com sinal');
+  a.delta=-7;
+  assert.equal(M.validateWorkspace(w),true);
+  delete a.delta;
+  assert.equal(M.validateWorkspace(w),false,'delta é obrigatório em ajustes');
+});
