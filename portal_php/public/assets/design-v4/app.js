@@ -58,6 +58,7 @@
   let workspace=load();
   let current='dashboard',role='Administrador',search='',category='Todos',movementFilter='Todos',mobileMenu=false;
   let modalReturnFocus=null;
+  let stockView=M.inventoryView(workspace);
   const host=document.getElementById('app');
   function save(){
     if(!M.validateWorkspace(workspace))throw Error('Os dados não passaram na validação de integridade.');
@@ -97,17 +98,17 @@
   function checkRole(action){if(!can(action)){toast('Esta ação não é permitida no papel de demonstração '+role+'.','error');return false}return true}
   function eventLog(action){workspace.events.unshift({id:uuid('EV'),action,actor:role+' (demo)',createdAt:now()});workspace.events=workspace.events.slice(0,100)}
   function button(text,action,extra='',disabled=false){return `<button type="button" class="btn ${extra}" data-action="${action}" ${disabled?'disabled':''}>${text}</button>`}
-  const pill=status=>`<span class="pill ${status==='Disponível'||status==='Aplicada'||status==='Ativa'||status==='Concluída'?'good':status==='Esgotado'||status==='Cancelada'?'bad':'warning'}">${E(status)}</span>`;
+  const pill=status=>`<span class="pill ${status==='Disponível'||status==='Aplicada'||status==='Ativa'||status==='Concluída'?'good':status==='Esgotado'||status==='Cancelada'||status==='Sem disponibilidade'?'bad':'warning'}">${E(status)}</span>`;
   function sidebar(){
     return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
       <div class="brand"><div class="brand-logo">${icon('box',24)}</div><div><strong>stockcontrol<span>.</span></strong><small>WORKSPACE INDUSTRIAL</small></div><button class="sidebar-x" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
       <div class="workspace-switch"><div class="workspace-avatar">F</div><div><strong>Fábrica Demo</strong><small>Ambiente local · ficção</small></div>${icon('chevron-down',16)}</div>
-      <div class="side-links">${menuGroups.map(group=>`<div class="side-group"><span class="side-label">${group.label}</span>${group.links.map(([key,ic])=>`<button data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic)}<span>${E(titles[key])}</span>${key==='inventory'&&M.summary(workspace).low+M.summary(workspace).out>0?`<b class="side-count">${M.summary(workspace).low+M.summary(workspace).out}</b>`:''}</button>`).join('')}</div>`).join('')}</div>
+      <div class="side-links">${menuGroups.map(group=>`<div class="side-group"><span class="side-label">${group.label}</span>${group.links.map(([key,ic])=>`<button data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic)}<span>${E(titles[key])}</span>${key==='inventory'&&stockView.low+stockView.out+stockView.blocked>0?`<b class="side-count">${stockView.low+stockView.out+stockView.blocked}</b>`:''}</button>`).join('')}</div>`).join('')}</div>
       <div class="sidebar-bottom"><div class="side-note">${icon('shield-check',20)}<strong>Ambiente de demonstração</strong><span>Sem ligação à base de dados ou API real.</span></div><button class="side-account" data-nav="settings"><span class="avatar">DM</span><span><b>Equipa de demonstração</b><small>Papel: ${E(role)}</small></span>${icon('chevron-right',16)}</button></div>
     </aside>`;
   }
   function header(){
-    const alerts=workspace.materials.filter(m=>M.status(m)!=='Disponível');
+    const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
     return `<header class="header"><div class="header-left"><button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button><span class="crumb">Workspace</span>${icon('chevron-right',15)}<strong>${E(titles[current])}</strong></div><div class="header-actions"><div class="top-search">${icon('search',17)}<input id="global-search" placeholder="Pesquisar materiais...  ⌘K" aria-label="Pesquisa global" value="${E(search)}"></div><button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',19)}</button><button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button><div class="header-user"><span class="avatar">DM</span><span class="header-name">Demo</span></div></div></header>`;
   }
   function pageHeader(eyebrow,title,subtitle,actions=''){
@@ -120,27 +121,27 @@
   function table(head,body){return `<div class="table-wrap"><table><thead><tr>${head.map(h=>`<th>${E(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`}
   function matLabel(m){return `<div class="product-cell"><div class="product-avatar">${E(m.name.slice(0,2).toUpperCase())}</div><div><b>${E(m.name)}</b><small>${E(m.sku)} · ${E(m.location||'Sem localização')}</small></div></div>`}
   function inventoryRow(m){
-    return `<tr><td>${matLabel(m)}</td><td>${E(m.category)}</td><td class="text-right"><b>${num(m.stock)} ${E(m.unit)}</b></td><td class="text-right">${num(M.available(m,workspace.reservations))} ${E(m.unit)}</td><td>${pill(M.status(m))}</td><td class="text-right"><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver ${E(m.name)}">${icon('chevron-right',18)}</button></td></tr>`;
+    return `<tr><td>${matLabel(m)}</td><td>${E(m.category)}</td><td class="text-right"><b>${num(m.stock)} ${E(m.unit)}</b></td><td class="text-right">${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td class="text-right"><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver ${E(m.name)}">${icon('chevron-right',18)}</button></td></tr>`;
   }
-  const lows=()=>workspace.materials.filter(m=>M.status(m)!=='Disponível').sort((a,b)=>a.stock-b.stock);
+  const lows=()=>workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível').sort((a,b)=>(stockView.availableBySku.get(a.sku)-stockView.availableBySku.get(b.sku)));
   function dashboard(){
-    const s=M.summary(workspace);
+    const s=stockView;
     const recent=workspace.movements.slice(0,5);
     const alerts=lows().slice(0,5);
-    const attention=alerts.length?alerts.map(m=>`<div class="attention-item"><div class="attention-ico">${icon('alert-triangle',17)}</div><span><b>${E(m.name)}</b><small>${E(m.sku)} · ${num(m.stock)} / mín. ${num(m.min)} ${E(m.unit)}</small></span>${pill(M.status(m))}</div>`).join(''):empty('Sem alertas','Todos os materiais acima do mínimo.');
+    const attention=alerts.length?alerts.map(m=>`<div class="attention-item"><div class="attention-ico">${icon('alert-triangle',17)}</div><span><b>${E(m.name)}</b><small>${E(m.sku)} · disponíveis ${num(stockView.availableBySku.get(m.sku))} / mín. ${num(m.min)} ${E(m.unit)}</small></span>${pill(stockView.statusBySku.get(m.sku))}</div>`).join(''):empty('Sem alertas','Todos os materiais acima do mínimo.');
     return `${pageHeader('CENTRO DE OPERAÇÕES','Bom dia, equipa','Uma visão consolidada da operação — dados locais de demonstração.',button(`${icon('download')} Exportar inventário`,'export-inventory','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
       <div class="section-caption"><b>RESUMO DA OPERAÇÃO</b><span>Valores calculados a partir dos ${s.total} materiais desta demo</span></div>
-      <div class="stats-grid">${stat('Referências registadas',num(s.total),'Materiais no catálogo','package')}${stat('Stock baixo',num(s.low),'Abaixo ou igual ao mínimo','alert-triangle','amber')}${stat('Esgotados',num(s.out),'Sem unidades disponíveis','box','rose')}${stat('Reservas ativas',num(s.active),'Quantidade alocada a ordens','layers','violet')}</div>
+      <div class="stats-grid">${stat('Referências registadas',num(s.total),'Materiais no catálogo','package')}${stat('Stock baixo',num(s.low),'Disponível abaixo do mínimo','alert-triangle','amber')}${stat('Sem disponibilidade',num(s.out+s.blocked),'Esgotados ou totalmente reservados','box','rose')}${stat('Reservas ativas',num(s.active),'Quantidade alocada a ordens','layers','violet')}</div>
       <div class="two-col"><section class="panel"><div class="panel-head"><div><h2>Materiais que precisam de atenção</h2><p>Prioridade de reposição</p></div>${button('Abrir inventário','go-inventory','plain')}</div><div class="attention-list">${attention}</div></section>
       <section class="panel"><div class="panel-head"><div><h2>Atividade recente</h2><p>Histórico local desta demonstração</p></div>${icon('clock')}</div><div class="activity-list">${recent.length?recent.map(m=>`<div class="activity-item"><span class="activity-ico ${m.type==='Saída'?'amber':'green'}">${icon(m.type==='Saída'?'arrow-down-right':'arrow-up-right',19)}</span><div><b>${E(m.type)} · ${E(getMat(m.sku)?.name||m.sku)}</b><small>${num(m.qty)} ${E(getMat(m.sku)?.unit||'')} · ${E(m.actor)}</small></div><time>${day(m.createdAt)}</time></div>`).join(''):empty('Sem movimentos','Regista a primeira entrada ou saída.','arrow-left-right')}</div></section></div>
       <section class="panel"><div class="panel-head"><div><h2>Catálogo de materiais</h2><p>Referências mais relevantes para acompanhar</p></div>${button('Ver todos','go-inventory','secondary small')}</div>${table(['Material','Categoria','Stock atual','Disponível','Estado',''],workspace.materials.slice(0,5).map(inventoryRow).join(''))}</section>`;
   }
   function inventory(){
-    const s=M.summary(workspace);
+    const s=stockView;
     const cats=['Todos',...new Set(workspace.materials.map(m=>m.category))];
     const rows=workspace.materials.filter(m=>(category==='Todos'||category===m.category)&&[m.name,m.sku,m.category,m.location].join(' ').toLowerCase().includes(search.toLowerCase()));
     return `${pageHeader('MATERIAIS E ARMAZÉM','Inventário','Pesquisa, níveis mínimos, disponibilidade real após reservas e localização.',button(`${icon('download')} CSV`,'export-inventory','secondary')+button(`${icon('plus')} Adicionar material`,'add-material','primary'))}
-      <div class="stats-grid three">${stat('Materiais',num(s.total),'Referências totais','package')}${stat('Precisam de reposição',num(s.low+s.out),'Stock baixo ou esgotado','alert-triangle','amber')}${stat('Valor indicativo',money(s.worth),'Preços de exemplo','chart-no-axes-combined','violet')}</div>
+      <div class="stats-grid three">${stat('Materiais',num(s.total),'Referências totais','package')}${stat('Em atenção',num(s.low+s.out+s.blocked),'Baixo, esgotado ou reservado','alert-triangle','amber')}${stat('Valor indicativo',money(s.worth),'Preços de exemplo','chart-no-axes-combined','violet')}</div>
       <section class="panel"><div class="panel-head"><div><h2>Lista de materiais <span class="count">${rows.length}</span></h2><p>Os dados desta versão permanecem apenas neste navegador.</p></div><div class="inline-search">${icon('search',17)}<input id="inventory-search" placeholder="Nome, SKU, localização..." aria-label="Filtrar inventário" value="${E(search)}"></div></div>
       <div class="filters">${cats.map(c=>`<button data-category="${E(c)}" class="filter-btn ${category===c?'active':''}">${E(c)}</button>`).join('')}</div>
       ${rows.length?table(['Material','Categoria','Stock atual','Disponível','Estado',''],rows.map(inventoryRow).join('')):empty('Sem resultados','Altera o termo de pesquisa ou os filtros.','search')}
@@ -172,11 +173,11 @@
       ${rows.length?table(['Ficheiro','Categoria','Dimensão','Material associado','Adicionado'],rows.map(r=>`<tr><td><b>${E(r.name)}</b></td><td>${E(r.category)}</td><td>${num(r.sizeKb)} KB</td><td>${E(getMat(r.sku)?.name||'Geral')}</td><td>${day(r.createdAt)}</td></tr>`).join('')):empty('Nenhum documento','Anexa um ficheiro para testar a interface.','file-text')}</section>`;
   }
   function reports(){
-    const s=M.summary(workspace);
+    const s=stockView;
     const counts=[...new Set(workspace.materials.map(m=>m.category))].map(c=>({category:c,total:workspace.materials.filter(m=>m.category===c).length,value:workspace.materials.filter(m=>m.category===c).reduce((n,m)=>n+m.stock*Number(m.cost||0),0)}));
     const max=Math.max(1,...counts.map(c=>c.value));
     return `${pageHeader('DADOS E ANÁLISE','Relatórios','Indicadores derivados dos materiais de demonstração, sem métricas inventadas.',button(`${icon('download')} Exportar stock`,'export-inventory','secondary')+button(`${icon('download')} Movimentos`,'export-movements','primary'))}
-      <div class="stats-grid three">${stat('Valor de stock',money(s.worth),'Custos unitários fictícios','chart-no-axes-combined','violet')}${stat('Materiais disponíveis',num(s.total-s.low-s.out),'Acima do stock mínimo','check','green')}${stat('Movimentos registados',num(workspace.movements.length),'Histórico de demonstração','arrow-left-right')}</div>
+      <div class="stats-grid three">${stat('Valor de stock',money(s.worth),'Custos unitários fictícios','chart-no-axes-combined','violet')}${stat('Materiais disponíveis',num(s.total-s.low-s.out-s.blocked),'Disponibilidade acima do mínimo','check','green')}${stat('Movimentos registados',num(workspace.movements.length),'Histórico de demonstração','arrow-left-right')}</div>
       <div class="two-col"><section class="panel"><div class="panel-head"><div><h2>Valor por categoria</h2><p>Estimativa ilustrativa em euros</p></div></div><div class="chart-rows">${counts.map(c=>`<div class="bar-row"><div class="bar-label"><b>${E(c.category)}</b><span>${money(c.value)}</span></div><div class="bar-track"><span style="width:${(100*c.value/max).toFixed(1)}%"></span></div></div>`).join('')}</div></section>
       <section class="panel"><div class="panel-head"><div><h2>Auditoria de demonstração</h2><p>Últimas ações no navegador</p></div></div><div class="audit-list">${workspace.events.slice(0,8).map(e=>`<div class="audit-row"><span>${icon('clock',16)}</span><div><b>${E(e.action)}</b><small>${E(e.actor)}</small></div><time>${day(e.createdAt)}</time></div>`).join('')}</div></section></div>`;
   }
@@ -204,6 +205,7 @@
   }
   const pages={dashboard,inventory,movements,reservations,counts,documents,reports,team,settings,billing,website};
   function render(){
+    stockView=M.inventoryView(workspace);
     host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V4 Workspace · Dados fictícios locais · Sem API, autenticação ou pagamentos reais</footer></main></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
   }
   function navigate(page){
@@ -381,7 +383,7 @@
   }
   function notifications(){
     const list=lows();
-    const message=list.length?list.map(m=>m.name+' ('+M.status(m)+')').join('\n'):'Não existem materiais em alerta.';
+    const message=list.length?list.map(m=>m.name+' ('+stockView.statusBySku.get(m.sku)+')').join('\n'):'Não existem materiais em alerta.';
     openModal('Centro de notificações',list.length+' materiais precisam de atenção.',`<div class="notification-list">${E(message).replace(/\n/g,'<br>')}</div>`,'Fechar','view');
   }
   function handleAction(name,data={}){
