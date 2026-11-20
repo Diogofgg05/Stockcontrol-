@@ -117,7 +117,7 @@
   function movements(){
     const rows=workspace.movements.filter(m=>movementFilter==='Todos'||m.type===movementFilter);
     return `${pageHeader('RASTREABILIDADE','Movimentos','Entradas, saídas e devoluções com validação do stock disponível.',button(`${icon('download')} Exportar CSV`,'export-movements','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
-      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td>${pill(r.type==='Saída'?'Stock baixo':'Disponível')} <span class="type-text">${E(r.type)}</span></td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
+      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td><span class="movement-type ${r.type==='Saída'?'outflow':'inflow'}">${icon(r.type==='Saída'?'arrow-down-right':'arrow-up-right',14)} ${E(r.type)}</span></td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
   }
   function reservations(){
     const rows=workspace.reservations;
@@ -152,7 +152,7 @@
     return `${pageHeader('PESSOAS E ACESSOS','Equipa e permissões','Visualiza papéis antes de integrares autenticação e políticas reais.')}
       <div class="notice">${icon('shield-check',18)} <span>O seletor de papéis serve apenas para pré-visualização. Não fornece autenticação ou autorização de segurança.</span></div>
       <section class="panel"><div class="panel-head"><div><h2>Equipa de exemplo</h2><p>Contas fictícias — sem convites ou emails reais</p></div></div>
-      ${table(['Utilizador','Papel','Estado'],workspace.users.map(u=>`<tr><td><b>${E(u.name)}</b></td><td>${E(u.role)}</td><td>${pill('Disponível')}</td></tr>`).join(''))}</section>
+      ${table(['Utilizador','Papel','Estado'],workspace.users.map(u=>`<tr><td><b>${E(u.name)}</b></td><td>${E(u.role)}</td><td>${pill(u.state==='Ativo'?'Ativa':u.state)}</td></tr>`).join(''))}</section>
       <section class="panel permission-panel"><div class="panel-head"><div><h2>Matriz de permissões planeada</h2><p>Tem de ser validada no backend para cada empresa</p></div></div>
       ${table(['Operação','Administrador','Operador','Auditor'],[['Ver materiais','✓','✓','✓'],['Movimentos','✓','✓','—'],['Reservas','✓','✓','—'],['Contagens físicas','✓','✓','—'],['Aprovar acertos','✓','—','—'],['Gestão de utilizadores','✓','—','—'],['Configurações','✓','—','—']].map(r=>`<tr>${r.map((c,i)=>`<td class="${i===0?'weight-bold':''}">${E(c)}</td>`).join('')}</tr>`).join(''))}</section>`;
   }
@@ -367,6 +367,9 @@
     if(b.dataset.movfilter){movementFilter=b.dataset.movfilter;render()}
   });
   document.addEventListener('keydown',event=>{
+    if(event.key==='Enter'&&event.target.id==='global-search'){
+      event.preventDefault();const q=event.target.value;navigate('inventory');search=q;render();document.getElementById('inventory-search')?.focus();return;
+    }
     if(event.key==='Escape'&&document.querySelector('.modal')){closeModal();return}
     if(event.key==='Tab'&&document.querySelector('.modal')){
       const inputs=[...document.querySelectorAll('.modal button,.modal input,.modal select,.modal textarea')].filter(e=>!e.disabled);
