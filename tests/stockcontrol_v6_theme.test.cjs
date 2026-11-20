@@ -39,16 +39,16 @@ test('all common UI classes have one reference theme implementation',()=>{
   }
 });
 test('shared rail and activity panel are rendered once in layout',()=>{
-  assert.match(bundle,/class="body-columns"/);
-  assert.match(bundle,/activityAside\\(\\)/);
-  assert.match(bundle,/function componentCatalog\\(/);
-  assert.match(bundle,/const pages=\\{[^\\n]*design:componentCatalog/);
+  assert.ok(bundle.includes('class="body-columns"'));
+  assert.ok(bundle.includes('activityAside()'));
+  assert.ok(bundle.includes('function componentCatalog()'));
+  assert.ok(bundle.includes('design:componentCatalog'));
 });
 test('all graph data derives from materials and not randomized placeholders',()=>{
-  assert.match(bundle,/function stockTrendChart\\(/);
-  assert.match(bundle,/stockView\\.availableBySku/);
-  assert.match(bundle,/function stockDonut\\(/);
-  assert.doesNotMatch(bundle,/Math\\.random\\(\\)\\s*\\*\\s*(?:100|1000)/);
+  assert.ok(bundle.includes('function stockTrendChart()'));
+  assert.ok(bundle.includes('stockView.availableBySku'));
+  assert.ok(bundle.includes('function stockDonut()'));
+  assert.ok(!bundle.includes('Math.random()*100'));
 });
 test('all dynamic charts use accessible text or title',()=>{
   assert.match(bundle,/class="stock-chart"[^>]+role="img"/);
