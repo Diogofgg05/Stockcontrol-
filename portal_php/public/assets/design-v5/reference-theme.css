@@ -399,3 +399,8 @@ body.modal-open .app-shell{filter:none}
 @media(prefers-reduced-motion:reduce){
  .app-shell *, .app-shell *:before, .app-shell *:after {transition:none!important;animation:none!important}
 }
+
+/* Design system gallery and secondary caption remain token-bound. */
+.catalog-selection{margin:0 38px 12px;font-size:11px;color:var(--sc-muted)}
+.segment-caption{font-size:11px;color:var(--sc-muted)}
+@media(max-width:590px){.catalog-selection{margin-left:17px;margin-right:17px}}
