@@ -129,7 +129,7 @@ test('estado adulterado no navegador é recusado ao recarregar',async()=>{
   const {page,context,errors}=await openPage();
   await page.evaluate(()=>localStorage.setItem('stockcontrol:v5:offline:v1',JSON.stringify({id:'demo',materials:'wrong'})));
   await page.reload();
-  assert.equal(await page.locator('.stat-card').first().locator('strong').innerText(),'8');
+  assert.match(await page.locator('.risk-metrics').innerText(),/Total de materiais[\s\S]*8/);
   assert.deepEqual(errors,[]);
   await context.close();
 });
@@ -248,7 +248,7 @@ test('inventário indica sem disponibilidade quando reserva absorve todo o stock
   assert.match(await row.innerText(),/Sem disponibilidade/);
   assert.match(await row.innerText(),/345/);
   await page.locator('.side-link[data-nav="dashboard"]').click();
-  assert.match(await page.locator('.stat-card').nth(2).innerText(),/Sem disponibilidade/);
+  assert.match(await page.locator('.dashboard-alerts').innerText(),/Sem disponibilidade/);
   await page.locator('[data-action="notifications"]').click();
   assert.match(await page.locator('.notification-list').innerText(),/Sem disponibilidade/);
   assert.deepEqual(errors,[]);
