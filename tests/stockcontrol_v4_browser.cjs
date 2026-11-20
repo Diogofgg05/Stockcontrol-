@@ -40,7 +40,7 @@ test('navegação dos 11 módulos sem exceções JavaScript',async()=>{
   const {page,context,errors}=await openPage();
   const pages=['dashboard','inventory','movements','reservations','counts','documents','reports','team','settings','billing','website'];
   for(const key of pages){
-    await page.locator('[data-nav="'+key+'"]').click();
+    await page.locator('.side-link[data-nav="'+key+'"]').click();
     assert.ok((await page.locator('h1').innerText()).length>3,'Sem heading em '+key);
     assert.equal(new URL(page.url()).hash,'#'+key);
   }
@@ -116,7 +116,7 @@ test('acerto físico cria movimento assinado no histórico e CSV',async()=>{
 });
 test('Auditor não pode criar material e não aparece um modal enganador',async()=>{
   const {page,context}=await openPage();
-  await page.locator('[data-nav="settings"]').click();
+  await page.locator('.side-link[data-nav="settings"]').click();
   await page.locator('#demo-role').selectOption('Auditor');
   await page.locator('[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
