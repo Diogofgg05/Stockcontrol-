@@ -1,3 +1,17 @@
+# StockControl V5 — arquitetura offline sem API
+
+A nova [**V5 Offline Workspace**](portal_php/public/assets/design-v5/) evolui a V4 para uma arquitetura modular, com um bundle executável diretamente no navegador, sem dependências de API ou de base de dados remota.
+
+- [Abrir a V5](portal_php/public/assets/design-v5/index.html)
+- [Manual de utilização](portal_php/public/assets/design-v5/README.md)
+- [Arquitetura e responsabilidades](portal_php/public/assets/design-v5/ARCHITECTURE.md)
+- [Código dividido em módulos](portal_php/public/assets/design-v5/src/)
+- [Workflow de testes V5](.github/workflows/stockcontrol-v5.yml)
+
+**Inclui:** inventário, movimentos, reservas/consumos, contagens, relatórios, backup/restauro JSON com validação, ordenação e paginação. Dados guardados no navegador. A V4 permanece intacta. A V5 **não substitui autenticação, permissões de servidor nem uma solução multiutilizador**.
+
+---
+
 # StockControl — protótipos de interface
 
 ## V4 Workspace — evolução de navegação e fluxos
