@@ -230,3 +230,25 @@ test('cancelamento após consumo parcial preserva histórico e stock descontado'
   assert.deepEqual(errors,[]);
   await context.close();
 });
+
+test('inventário indica sem disponibilidade quando reserva absorve todo o stock físico',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-nav="reservations"]').click();
+  page.on('dialog',d=>d.accept());
+  await page.locator('[data-action="cancel-reservation"][data-id="RS-001"]').click();
+  await page.locator('[data-action="new-reservation"]').click();
+  await page.locator('#modal-form [name="sku"]').selectOption('MAT-001');
+  await page.locator('#modal-form [name="order"]').fill('OP-RESERVA-TOTAL');
+  await page.locator('#modal-form [name="qty"]').fill('345');
+  await page.locator('#modal-form [type="submit"]').click();
+  await page.locator('[data-nav="inventory"]').click();
+  const row=page.locator('tbody tr').filter({hasText:'MAT-001'});
+  assert.match(await row.innerText(),/Sem disponibilidade/);
+  assert.match(await row.innerText(),/345/);
+  await page.locator('[data-nav="dashboard"]').click();
+  assert.match(await page.locator('.stat-card').nth(2).innerText(),/Sem disponibilidade/);
+  await page.locator('[data-action="notifications"]').click();
+  assert.match(await page.locator('.notification-list').innerText(),/Sem disponibilidade/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
