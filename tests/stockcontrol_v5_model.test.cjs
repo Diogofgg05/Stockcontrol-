@@ -82,7 +82,7 @@ test('pré-visualização inclui aviso explícito de dados fictícios',()=>{
   const root=path.join(__dirname,'../portal_php/public/assets/design-v5');
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-  assert.match(html,/Demonstração/);
+  assert.match(html,/StockControl V5 — Offline Workspace/);
   assert.match(app,/Sem API ou pagamentos reais/);
   assert.match(app,/StockControl V5 Offline/);
 });
