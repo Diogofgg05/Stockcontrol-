@@ -55,3 +55,22 @@ jobs:
           path: tests/v5-previews/
           if-no-files-found: ignore
           retention-days: 14
+  scaffold-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Generate new page and reusable component
+        run: |
+          node portal_php/public/assets/design-v5/tools/scaffold.cjs page "Inspeções"
+          node portal_php/public/assets/design-v5/tools/scaffold.cjs component "Cartao de estado"
+      - name: Verify generated component inherits V6 design
+        run: |
+          node portal_php/public/assets/design-v5/tools/build.cjs --check
+          node --check portal_php/public/assets/design-v5/app.js
+          grep -q 'additionalPages\["inspecoes"\]' portal_php/public/assets/design-v5/app.js
+          grep -q 'component_cartao_de_estado' portal_php/public/assets/design-v5/app.js
+          grep -q 'class="panel"' portal_php/public/assets/design-v5/src/pages/inspecoes.jsfrag
+          grep -q 'class="stat-card sc-component"' portal_php/public/assets/design-v5/src/components/cartao-de-estado.jsfrag
