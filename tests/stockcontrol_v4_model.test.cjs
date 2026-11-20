@@ -171,3 +171,55 @@ test('ajuste inválido não passa validação do histórico',()=>{
   delete a.delta;
   assert.equal(M.validateWorkspace(w),false,'delta é obrigatório em ajustes');
 });
+
+test('consumo parcial reduz stock e reserva sem alterar disponibilidade livre',()=>{
+  const w=demo(),m=w.materials[0],r=w.reservations[0];
+  const initial=M.available(m,w.reservations);
+  const change=M.planConsumption(m,r,12,w.reservations);
+  assert.deepEqual(change,{stock:333,consumed:12,status:'Ativa',used:12,remaining:18});
+  m.stock=change.stock;r.consumed=change.consumed;
+  assert.equal(M.reservationRemaining(r),18);
+  assert.equal(M.available(m,w.reservations),initial);
+  assert.equal(M.validateWorkspace(w),true);
+});
+test('consumo total conclui a reserva e mantém saldo livre constante',()=>{
+  const w=demo(),m=w.materials[0],r=w.reservations[0];
+  const initial=M.available(m,w.reservations);
+  const result=M.planConsumption(m,r,30,w.reservations);
+  m.stock=result.stock;r.consumed=result.consumed;r.status=result.status;
+  assert.equal(result.remaining,0);
+  assert.equal(r.status,'Concluída');
+  assert.equal(M.reserved(m.sku,w.reservations),0);
+  assert.equal(M.available(m,w.reservations),initial);
+  assert.equal(M.validateWorkspace(w),true);
+});
+test('consumo acima do saldo ou em reserva concluída é rejeitado',()=>{
+  const w=demo(),m=w.materials[0],r=w.reservations[0];
+  assert.throws(()=>M.planConsumption(m,r,30.001,w.reservations),/saldo reservado/);
+  assert.throws(()=>M.planConsumption(m,r,0,w.reservations),/quantidade positiva/);
+  const result=M.planConsumption(m,r,30,w.reservations);
+  r.consumed=result.consumed;r.status=result.status;m.stock=result.stock;
+  assert.throws(()=>M.planConsumption(m,r,0.001,w.reservations),/não está ativa/);
+});
+test('cancelamento depois de consumo parcial não reverte stock físico consumido',()=>{
+  const w=demo(),m=w.materials[0],r=w.reservations[0];
+  const result=M.planConsumption(m,r,12,w.reservations);
+  m.stock=result.stock;r.consumed=result.consumed;r.status='Cancelada';
+  assert.equal(m.stock,333);
+  assert.equal(M.reservationRemaining(r),0);
+  assert.equal(M.available(m,w.reservations),333);
+  assert.equal(M.validateWorkspace(w),true);
+});
+test('histórico do consumo exige referência válida e delta negativo correto',()=>{
+  const w=demo(),entry={id:'MV-CONSUMO',sku:'MAT-001',type:'Consumo',qty:12,delta:-12,
+    reservationId:'RS-001',actor:'Operador (demo)',createdAt:new Date().toISOString()};
+  w.movements.unshift(entry);
+  assert.equal(M.validateWorkspace(w),true);
+  entry.delta=12;assert.equal(M.validateWorkspace(w),false);
+  entry.delta=-12;entry.reservationId='RS-404';assert.equal(M.validateWorkspace(w),false);
+});
+test('dados V4 de reservas antigas sem consumed continuam a ser aceites',()=>{
+  const w=demo();delete w.reservations[0].consumed;
+  assert.equal(M.validateWorkspace(w),true);
+  assert.equal(M.reservationRemaining(w.reservations[0]),30);
+});
