@@ -1,0 +1,28 @@
+  function render(){
+    stockView=M.inventoryView(workspace);
+    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V4 Workspace · Dados fictícios locais · Sem API, autenticação ou pagamentos reais</footer></main></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
+  }
+  function navigate(page){
+    if(!pages[page])return;
+    current=page;mobileMenu=false;search='';category='Todos';
+    if(location.hash.slice(1)!==page)history.replaceState(null,'','#'+page);
+    render();
+    window.scrollTo({top:0,behavior:'auto'});
+  }
+  function closeModal(){
+    document.getElementById('modal-host').replaceChildren();
+    host.inert=false;
+    document.body.classList.remove('modal-open');
+    if(modalReturnFocus?.isConnected)modalReturnFocus.focus();
+    modalReturnFocus=null;
+  }
+  function openModal(title,subtitle,body,submitLabel,kind){
+    modalReturnFocus=document.activeElement;
+    host.inert=true;
+    document.body.classList.add('modal-open');
+    const dialog=document.getElementById('modal-host');
+    dialog.innerHTML=`<div class="modal-backdrop" data-action="close-modal"></div><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description"><div class="modal-header"><div><span class="eyebrow">STOCKCONTROL · DEMO</span><h2 id="modal-title">${E(title)}</h2><p id="modal-description">${E(subtitle)}</p></div><button type="button" class="icon-btn" data-action="close-modal" aria-label="Fechar diálogo">${icon('x')}</button></div><form id="modal-form" data-kind="${E(kind)}"><div class="modal-fields">${body}</div><div class="modal-footer">${button('Cancelar','close-modal','secondary')}<button type="submit" class="btn primary">${E(submitLabel)}</button></div></form></section>`;
+    dialog.querySelector('input,select,button')?.focus();
+  }
+  const field=(label,name,type='text',value='',extra='')=>`<label class="field-label">${E(label)}<input class="field" name="${E(name)}" type="${E(type)}" value="${E(value)}" ${extra} required></label>`;
+  const materialSelect=selected=>`<label class="field-label">Material<select class="field" name="sku" required>${workspace.materials.map(m=>`<option value="${E(m.sku)}" ${m.sku===selected?'selected':''}>${E(m.sku)} · ${E(m.name)} (${num(M.available(m,workspace.reservations))} ${E(m.unit)} disponíveis)</option>`).join('')}</select></label>`;
