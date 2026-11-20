@@ -14,12 +14,21 @@
     const s=stockView;
     const cats=['Todos',...new Set(workspace.materials.map(m=>m.category))];
     const rows=workspace.materials.filter(m=>(category==='Todos'||category===m.category)&&[m.name,m.sku,m.category,m.location].join(' ').toLowerCase().includes(search.toLowerCase()));
+    rows.sort((a,b)=>{
+      if(inventorySort==='name')return a.name.localeCompare(b.name,'pt');
+      if(inventorySort==='stock')return a.stock-b.stock||a.sku.localeCompare(b.sku);
+      if(inventorySort==='available')return stockView.availableBySku.get(a.sku)-stockView.availableBySku.get(b.sku)||a.sku.localeCompare(b.sku);
+      return a.sku.localeCompare(b.sku);
+    });
+    const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+    inventoryPage=Math.min(pages,Math.max(1,inventoryPage));
+    const visible=rows.slice((inventoryPage-1)*PAGE_SIZE,inventoryPage*PAGE_SIZE);
     return `${pageHeader('MATERIAIS E ARMAZÉM','Inventário','Pesquisa, níveis mínimos, disponibilidade real após reservas e localização.',button(`${icon('download')} CSV`,'export-inventory','secondary')+button(`${icon('plus')} Adicionar material`,'add-material','primary'))}
       <div class="stats-grid three">${stat('Materiais',num(s.total),'Referências totais','package')}${stat('Em atenção',num(s.low+s.out+s.blocked),'Baixo, esgotado ou reservado','alert-triangle','amber')}${stat('Valor indicativo',money(s.worth),'Preços de exemplo','chart-no-axes-combined','violet')}</div>
-      <section class="panel"><div class="panel-head"><div><h2>Lista de materiais <span class="count">${rows.length}</span></h2><p>Os dados desta versão permanecem apenas neste navegador.</p></div><div class="inline-search">${icon('search',17)}<input id="inventory-search" placeholder="Nome, SKU, localização..." aria-label="Filtrar inventário" value="${E(search)}"></div></div>
+      <section class="panel"><div class="panel-head"><div><h2>Lista de materiais <span class="count">${rows.length}</span></h2><p>Os dados desta versão permanecem apenas neste navegador.</p></div><div class="inline-search">${icon('search',17)}<input id="inventory-search" placeholder="Nome, SKU, localização..." aria-label="Filtrar inventário" value="${E(search)}"></div><select id="inventory-sort" aria-label="Ordenar inventário"><option value="sku">Código SKU</option><option value="name">Nome A–Z</option><option value="stock">Menor stock físico</option><option value="available">Menor stock livre</option></select></div>
       <div class="filters">${cats.map(c=>`<button data-category="${E(c)}" class="filter-btn ${category===c?'active':''}">${E(c)}</button>`).join('')}</div>
-      ${rows.length?table(['Material','Categoria','Stock atual','Disponível','Estado',''],rows.map(inventoryRow).join('')):empty('Sem resultados','Altera o termo de pesquisa ou os filtros.','search')}
-      <div class="table-footer">A mostrar ${rows.length} de ${s.total} referências · demo</div></section>`;
+      ${rows.length?table(['Material','Categoria','Stock atual','Disponível','Estado',''],visible.map(inventoryRow).join('')):empty('Sem resultados','Altera o termo de pesquisa ou os filtros.','search')}
+      <div class="pager"><span>A mostrar ${visible.length} de ${rows.length} referências filtradas</span><div class="pager-controls"><button type="button" data-action="prev-inventory" ${inventoryPage<=1?'disabled':''}>Anterior</button><span>Página ${inventoryPage} / ${pages}</span><button type="button" data-action="next-inventory" ${inventoryPage>=pages?'disabled':''}>Seguinte</button></div></div></section>`;
   }
   function movements(){
     const rows=workspace.movements.filter(m=>movementFilter==='Todos'||m.type===movementFilter);
