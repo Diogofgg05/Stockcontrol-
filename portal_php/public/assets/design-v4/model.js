@@ -67,7 +67,7 @@
     for(const m of w.materials){
       if(!m||typeof m!=='object'||!validString(m.sku,36)||!(/^[A-Z0-9][A-Z0-9._-]{1,35}$/.test(m.sku))||skuSet.has(m.sku)
         ||!validString(m.name,100)||!validString(m.category,40)||!validString(m.unit,10)
-        ||!validString(m.location,36)||!preciseQty(m.stock,true)||!preciseQty(m.min,true)
+        ||!validString(m.location,36)||typeof m.stock!=='number'||typeof m.min!=='number'||!preciseQty(m.stock,true)||!preciseQty(m.min,true)
         ||!Number.isFinite(m.cost)||m.cost<0||m.cost>MAX_QTY)return false;
       skuSet.add(m.sku);
     }
@@ -75,10 +75,10 @@
     if(!refs(w.reservations)||!refs(w.movements)||!refs(w.counts))return false;
     const unique = entries => new Set(entries.map(x=>x.id)).size===entries.length;
     if(![w.reservations,w.movements,w.counts,w.events,w.documents].every(unique))return false;
-    if(!w.reservations.every(r=>validString(r.order,40)&&preciseQty(r.qty)&&['Ativa','Cancelada'].includes(r.status)))return false;
-    if(!w.movements.every(m=>preciseQty(m.qty)&&['Entrada','Saída','Devolução','Ajuste'].includes(m.type)
+    if(!w.reservations.every(r=>validString(r.order,40)&&typeof r.qty==='number'&&preciseQty(r.qty)&&['Ativa','Cancelada'].includes(r.status)))return false;
+    if(!w.movements.every(m=>typeof m.qty==='number'&&preciseQty(m.qty)&&['Entrada','Saída','Devolução','Ajuste'].includes(m.type)
       &&validString(m.actor,100)&&(!m.note||typeof m.note==='string'&&m.note.length<=250)))return false;
-    if(!w.counts.every(c=>preciseQty(c.expected,true)&&preciseQty(c.counted,true)
+    if(!w.counts.every(c=>typeof c.expected==='number'&&typeof c.counted==='number'&&preciseQty(c.expected,true)&&preciseQty(c.counted,true)
       &&['Pendente','Aplicada','Rejeitada'].includes(c.status)))return false;
     if(!w.documents.every(d=>d&&validId(d.id)&&validString(d.name,120)
       &&validString(d.category,40)&&Number.isFinite(d.sizeKb)&&d.sizeKb>=0&&d.sizeKb<=5120
