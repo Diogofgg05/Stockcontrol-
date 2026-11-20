@@ -1,3 +1,19 @@
+# StockControl V6 — Reference Dark Design System
+
+A V6 aplica a imagem de referência do utilizador a **todas as páginas e componentes**: app escura com rail vertical de ícones, fundo exterior pervinca, linhas de 1px, gráficos lilás/lima, coluna de atividade lateral e controles compactos. O design mantém o núcleo offline da V5.
+
+- [**Abrir o ecrã V6**](portal_php/public/assets/design-v5/index.html)
+- [Prompt mestre da imagem](portal_php/public/assets/design-v5/DESIGN_PROMPT_REFERENCE.md)
+- [Guia do Design System (tokens e criação automática)](portal_php/public/assets/design-v5/DESIGN_SYSTEM.md)
+- [CSS canónico](portal_php/public/assets/design-v5/reference-theme.css)
+- [Source modular](portal_php/public/assets/design-v5/src/)
+- [Gerador de páginas e componentes](portal_php/public/assets/design-v5/tools/scaffold.cjs)
+- [CI V6](.github/workflows/stockcontrol-v6.yml)
+
+**Nota:** a V6 evolui a pasta `design-v5/` **nesta branch**. A implementação V5 original está preservada na branch `feat/stockcontrol-v4-workspace`. Não há backend nem autenticação de produção.
+
+---
+
 # StockControl V5 — arquitetura offline sem API
 
 A nova [**V5 Offline Workspace**](portal_php/public/assets/design-v5/) evolui a V4 para uma arquitetura modular, com um bundle executável diretamente no navegador, sem dependências de API ou de base de dados remota.
