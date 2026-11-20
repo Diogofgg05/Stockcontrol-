@@ -329,7 +329,7 @@ test('V6: reference dark style is inherited on every page',async()=>{
    assert.equal(appearance.canvas,expected.base,key+' background');
    assert.equal(appearance.accent,expected.lavender,key+' lavender');
    assert.equal(appearance.lime,expected.lime,key+' lime');
-   assert.equal(appearance.line,'#393741',key+' divider');
+   assert.equal(appearance.line,'#383640',key+' divider');
    assert.ok(appearance.hasRail,key+' has shared rail');
    assert.ok(appearance.hasActivity,key+' has shared activity');
    if(appearance.panelColor)assert.equal(appearance.panelColor,expected.base,key+' panel');
