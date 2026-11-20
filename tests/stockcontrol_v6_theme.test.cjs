@@ -13,8 +13,8 @@ test('the screenshot palette is defined once in canonical tokens',()=>{
     '--sc-backdrop':'#B4C8F6',
     '--sc-bg':'#16151E',
     '--sc-bg-deep':'#13121A',
-    '--sc-surface':'#22212C',
-    '--sc-line':'#393741',
+    '--sc-surface':'#201F29',
+    '--sc-line':'#383640',
     '--sc-text':'#F7F5FB',
     '--sc-lavender':'#C9BCFF',
     '--sc-lime':'#D8F574'
