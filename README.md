@@ -8,6 +8,19 @@ A nova versão em [`portal_php/public/assets/design-v4/`](portal_php/public/asse
 
 ---
 
+## Auditoria e próxima evolução
+
+- [Relatório de bugs, alterações e bloqueadores de publicação](AUDITORIA_STOCKCONTROL_V4.md)
+- [Prompt técnico completo para desenvolvimento, segurança, design e testes](PROMPT_MELHORIAS_STOCKCONTROL.md)
+- [Testes unitários de integridade](tests/stockcontrol_v4_model.test.cjs) e [testes browser Chromium/Playwright](tests/stockcontrol_v4_browser.cjs).
+- Os testes correm no [workflow StockControl V4](.github/workflows/stockcontrol-v4.yml); a execução mais recente determina o estado da validação.
+
+**A V4 é apenas um protótipo.** O backend PHP/FastAPI, as migrações e o instalador não estão publicados neste repositório; não é adequado utilizar dados reais de clientes ou apresentar este projeto como SaaS comercial pronto.
+
+---
+
+
+
 # StockControl — design V3.0
 
 Pré-visualização interativa do novo design do StockControl. Código em [`portal_php/public/assets/design-v3/`](portal_php/public/assets/design-v3/).
