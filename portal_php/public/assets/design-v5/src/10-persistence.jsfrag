@@ -31,6 +31,32 @@
     h.textContent=message;h.dataset.type=type;h.classList.add('visible');
     clearTimeout(toast.t);toast.t=setTimeout(()=>h.classList.remove('visible'),4000);
   }
+  function downloadBackup(){
+    try{
+      const json=window.StockBackup.exportBackup(workspace,M);
+      const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='stockcontrol-backup-'+new Date().toISOString().slice(0,10)+'.json';
+      a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      toast('Backup JSON validado e exportado.');
+    }catch(error){toast(error.message,'error')}
+  }
+  async function restoreBackup(file){
+    if(!file||!checkRole('manage'))return;
+    try{
+      if(file.size>window.StockBackup.LIMIT)throw Error('Backup excede 8 MB.');
+      const parsed=window.StockBackup.parseBackup(await file.text(),M);
+      if(!confirm('Substituir todos os dados locais desta V5 pelo backup selecionado? Esta operação não pode ser desfeita sem um backup anterior.'))return;
+      const before=JSON.parse(JSON.stringify(workspace));
+      try{
+        workspace=parsed;
+        const saved=save();
+        if(!saved)throw Error('Falha ao guardar o backup. Verifica o armazenamento local.');
+        current='dashboard';search='';category='Todos';inventoryPage=1;
+        render();toast('Backup restaurado e verificado.');
+      }catch(error){recover(error,before)}
+    }catch(error){toast(error.message||'Backup inválido.','error')}
+  }
   const getMat=sku=>workspace.materials.find(m=>m.sku===sku);
   const can=action=>role==='Administrador'||(role==='Operador'&&['move','reserve','count','document'].includes(action));
   function checkRole(action){if(!can(action)){toast('Esta ação não é permitida no papel de demonstração '+role+'.','error');return false}return true}
