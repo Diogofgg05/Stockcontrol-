@@ -253,6 +253,8 @@
   function render(){
     stockView=M.inventoryView(workspace);
     host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V5 Offline · Dados locais no navegador · Sem API ou pagamentos reais</footer></main></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
+    const sortControl=document.getElementById('inventory-sort');
+    if(sortControl)sortControl.value=inventorySort;
   }
   function navigate(page){
     if(!pages[page])return;
