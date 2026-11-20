@@ -1,0 +1,25 @@
+  function sidebar(){
+    return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
+      <div class="brand"><div class="brand-logo">${icon('box',24)}</div><div><strong>stockcontrol<span>.</span></strong><small>WORKSPACE INDUSTRIAL</small></div><button class="sidebar-x" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
+      <div class="workspace-switch"><div class="workspace-avatar">F</div><div><strong>Fábrica Demo</strong><small>Ambiente local · ficção</small></div>${icon('chevron-down',16)}</div>
+      <div class="side-links">${menuGroups.map(group=>`<div class="side-group"><span class="side-label">${group.label}</span>${group.links.map(([key,ic])=>`<button data-nav="${key}" class="side-link ${current===key?'active':''}" ${current===key?'aria-current="page"':''}>${icon(ic)}<span>${E(titles[key])}</span>${key==='inventory'&&stockView.low+stockView.out+stockView.blocked>0?`<b class="side-count">${stockView.low+stockView.out+stockView.blocked}</b>`:''}</button>`).join('')}</div>`).join('')}</div>
+      <div class="sidebar-bottom"><div class="side-note">${icon('shield-check',20)}<strong>Ambiente de demonstração</strong><span>Sem ligação à base de dados ou API real.</span></div><button class="side-account" data-nav="settings"><span class="avatar">DM</span><span><b>Equipa de demonstração</b><small>Papel: ${E(role)}</small></span>${icon('chevron-right',16)}</button></div>
+    </aside>`;
+  }
+  function header(){
+    const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
+    return `<header class="header"><div class="header-left"><button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button><span class="crumb">Workspace</span>${icon('chevron-right',15)}<strong>${E(titles[current])}</strong></div><div class="header-actions"><div class="top-search">${icon('search',17)}<input id="global-search" placeholder="Pesquisar materiais...  ⌘K" aria-label="Pesquisa global" value="${E(search)}"></div><button type="button" class="icon-btn mobile-search" data-action="go-inventory-search" aria-label="Pesquisar inventário">${icon('search',19)}</button><button class="icon-btn notification" data-action="notifications" aria-label="Ver alertas">${icon('bell',19)}${alerts.length?'<i></i>':''}</button><div class="header-user"><span class="avatar">DM</span><span class="header-name">Demo</span></div></div></header>`;
+  }
+  function pageHeader(eyebrow,title,subtitle,actions=''){
+    return `<div class="page-head"><div><span class="eyebrow">${E(eyebrow)}</span><h1>${E(title)}</h1><p>${E(subtitle)}</p></div>${actions?`<div class="page-actions">${actions}</div>`:''}</div>`;
+  }
+  function stat(title,value,detail,ic,accent='blue'){
+    return `<article class="stat-card"><div class="stat-top"><span>${E(title)}</span><span class="stat-ico ${accent}">${icon(ic,20)}</span></div><strong>${value}</strong><small>${E(detail)}</small></article>`;
+  }
+  function empty(title,description,ic='package'){return `<div class="empty">${icon(ic,28)}<b>${E(title)}</b><span>${E(description)}</span></div>`}
+  function table(head,body){return `<div class="table-wrap"><table><thead><tr>${head.map(h=>`<th>${E(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`}
+  function matLabel(m){return `<div class="product-cell"><div class="product-avatar">${E(m.name.slice(0,2).toUpperCase())}</div><div><b>${E(m.name)}</b><small>${E(m.sku)} · ${E(m.location||'Sem localização')}</small></div></div>`}
+  function inventoryRow(m){
+    return `<tr><td>${matLabel(m)}</td><td>${E(m.category)}</td><td class="text-right"><b>${num(m.stock)} ${E(m.unit)}</b></td><td class="text-right">${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td class="text-right"><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver ${E(m.name)}">${icon('chevron-right',18)}</button></td></tr>`;
+  }
+  const lows=()=>workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível').sort((a,b)=>(stockView.availableBySku.get(a.sku)-stockView.availableBySku.get(b.sku)));
