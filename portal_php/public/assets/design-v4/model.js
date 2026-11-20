@@ -77,7 +77,9 @@
     if(![w.reservations,w.movements,w.counts,w.events,w.documents].every(unique))return false;
     if(!w.reservations.every(r=>validString(r.order,40)&&typeof r.qty==='number'&&preciseQty(r.qty)&&['Ativa','Cancelada'].includes(r.status)))return false;
     if(!w.movements.every(m=>typeof m.qty==='number'&&preciseQty(m.qty)&&['Entrada','Saída','Devolução','Ajuste'].includes(m.type)
-      &&validString(m.actor,100)&&(!m.note||typeof m.note==='string'&&m.note.length<=250)))return false;
+      &&validString(m.actor,100)&&(!m.note||typeof m.note==='string'&&m.note.length<=250)
+      &&(m.type!=='Ajuste'||typeof m.delta==='number'&&Number.isFinite(m.delta)&&m.delta!==0
+        &&preciseQty(Math.abs(m.delta))&&roundQty(Math.abs(m.delta))===m.qty)))return false;
     if(!w.counts.every(c=>typeof c.expected==='number'&&typeof c.counted==='number'&&preciseQty(c.expected,true)&&preciseQty(c.counted,true)
       &&['Pendente','Aplicada','Rejeitada'].includes(c.status)))return false;
     if(!w.documents.every(d=>d&&validId(d.id)&&validString(d.name,120)
