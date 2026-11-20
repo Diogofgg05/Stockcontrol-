@@ -223,3 +223,54 @@ test('dados V4 de reservas antigas sem consumed continuam a ser aceites',()=>{
   assert.equal(M.validateWorkspace(w),true);
   assert.equal(M.reservationRemaining(w.reservations[0]),30);
 });
+
+test('material totalmente reservado mas com stock físico positivo fica sem disponibilidade',()=>{
+  const w=demo(),m=w.materials[0];
+  w.reservations[0].qty=345;
+  const view=M.inventoryView(w);
+  assert.equal(m.stock,345);
+  assert.equal(view.availableBySku.get(m.sku),0);
+  assert.equal(view.statusBySku.get(m.sku),'Sem disponibilidade');
+  assert.equal(M.status(m,w.reservations),'Sem disponibilidade');
+  assert.equal(view.blocked,1);
+  assert.equal(view.out,1);
+  assert.equal(M.validateWorkspace(w),true);
+});
+test('estado Stock baixo usa saldo livre após reservas, não apenas o físico',()=>{
+  const w=demo(),m=w.materials[0];
+  w.reservations[0].qty=300;
+  const view=M.inventoryView(w);
+  assert.equal(view.availableBySku.get('MAT-001'),45);
+  assert.equal(view.statusBySku.get('MAT-001'),'Stock baixo');
+  assert.equal(M.status(m,w.reservations),'Stock baixo');
+  assert.equal(view.low,3);
+});
+test('dashboard não confunde stock físico esgotado com material totalmente reservado',()=>{
+  const w=demo();
+  w.reservations[0].qty=345;
+  const view=M.inventoryView(w);
+  assert.equal(view.out,1);
+  assert.equal(view.blocked,1);
+  assert.equal(view.total-w.materials.length,0);
+  assert.equal(M.summary(w).blocked,1);
+});
+test('consumo parcial mantém os estados derivados do saldo livre',()=>{
+  const w=demo(),m=w.materials[0],r=w.reservations[0];
+  r.qty=345;
+  const initial=M.inventoryView(w).statusBySku.get(m.sku);
+  const p=M.planConsumption(m,r,10,w.reservations);
+  m.stock=p.stock;r.consumed=p.consumed;r.status=p.status;
+  assert.equal(initial,'Sem disponibilidade');
+  assert.equal(M.inventoryView(w).statusBySku.get(m.sku),'Sem disponibilidade');
+  assert.equal(M.inventoryView(w).availableBySku.get(m.sku),0);
+});
+test('indicadores agregados e stock disponível individual são equivalentes',()=>{
+  const w=demo();
+  const view=M.inventoryView(w);
+  for(const m of w.materials){
+    assert.equal(view.availableBySku.get(m.sku),M.available(m,w.reservations));
+    assert.equal(view.statusBySku.get(m.sku),M.status(m,w.reservations));
+  }
+  assert.equal(view.total,w.materials.length);
+  assert.equal(view.active,w.reservations.filter(r=>r.status==='Ativa').length);
+});
