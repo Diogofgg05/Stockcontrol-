@@ -7,7 +7,7 @@ const http=require('node:http');
 const {chromium}=require('playwright');
 const root=path.join(__dirname,'../portal_php/public/assets/design-v5');
 const previews=path.join(__dirname,'v5-previews');
-const allowed=new Set(['index.html','model.js','backup.js','app.js','styles.css']);
+const allowed=new Set(['index.html','model.js','backup.js','app.js','styles.css','reference-theme.css']);
 const server=http.createServer((req,res)=>{
   const name=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname).replace(/^\/+/, '')||'index.html';
   if(!allowed.has(name)){res.writeHead(404);res.end('Not found');return}
@@ -304,4 +304,68 @@ test('V5: inventory sorting and pagination display correct rows',async()=>{
   assert.match(await page.locator('.pager').innerText(),/Página 1/);
   assert.deepEqual(errors,[]);
   await context.close();
+});
+
+test('V6: reference dark style is inherited on every page',async()=>{
+ const {page,context,errors}=await openPage({width:1440,height:900});
+ const expected={base:'rgb(22, 21, 30)',lavender:'#C9BCFF',lime:'#D8F574'};
+ const pages=['dashboard','inventory','movements','reservations','counts','documents','reports','team','settings','billing','website','design'];
+ for(const key of pages){
+   await page.locator('.side-link[data-nav="'+key+'"]').click();
+   const appearance=await page.evaluate(()=>{
+     const root=getComputedStyle(document.documentElement);
+     const panel=document.querySelector('.panel');
+     return {
+       canvas:getComputedStyle(document.querySelector('.app-shell')).backgroundColor,
+       page:getComputedStyle(document.body).backgroundColor,
+       line:root.getPropertyValue('--sc-line').trim(),
+       accent:root.getPropertyValue('--sc-lavender').trim(),
+       lime:root.getPropertyValue('--sc-lime').trim(),
+       hasRail:!!document.querySelector('aside.sidebar'),
+       hasActivity:!!document.querySelector('aside.right-insights'),
+       panelColor:panel?getComputedStyle(panel).backgroundColor:null
+     };
+   });
+   assert.equal(appearance.canvas,expected.base,key+' background');
+   assert.equal(appearance.accent,expected.lavender,key+' lavender');
+   assert.equal(appearance.lime,expected.lime,key+' lime');
+   assert.equal(appearance.line,'#393741',key+' divider');
+   assert.ok(appearance.hasRail,key+' has shared rail');
+   assert.ok(appearance.hasActivity,key+' has shared activity');
+   if(appearance.panelColor)assert.equal(appearance.panelColor,expected.base,key+' panel');
+ }
+ await page.screenshot({path:path.join(previews,'v6-design-system-desktop.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+test('V6: dashboard chart uses real inventory data and lavender/lime series',async()=>{
+ const {page,context,errors}=await openPage();
+ await page.locator('.side-link[data-nav="dashboard"]').click();
+ assert.equal(await page.locator('.stock-chart').count(),1);
+ assert.ok((await page.locator('.chart-line').count())>=2);
+ const before=await page.locator('.chart-line').count();
+ await page.locator('[data-series="free"]').click();
+ assert.equal(await page.locator('.chart-line').count(),1);
+ assert.equal(await page.locator('[data-series="free"]').getAttribute('aria-pressed'),'true');
+ await page.locator('[data-series="both"]').click();
+ assert.equal(await page.locator('.chart-line').count(),before);
+ await page.screenshot({path:path.join(previews,'v6-dashboard-desktop.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+test('V6: mobile rail, controls and modal share dark theme',async()=>{
+ const {page,context,errors}=await openPage({width:390,height:844});
+ await page.locator('[data-action="toggle-menu"]').click();
+ assert.match(await page.locator('.sidebar').getAttribute('class'),/open/);
+ await page.locator('.sidebar .side-link[data-nav="inventory"]').click();
+ await page.locator('[data-action="add-material"]').click();
+ const modal=page.locator('.modal');
+ assert.equal(await modal.count(),1);
+ const c=await modal.evaluate(el=>getComputedStyle(el).backgroundColor);
+ assert.equal(c,'rgb(22, 21, 30)');
+ await page.screenshot({path:path.join(previews,'v6-mobile-modal.png'),fullPage:true});
+ await page.keyboard.press('Escape');
+ assert.equal(await modal.count(),0);
+ assert.deepEqual(errors,[]);
+ await context.close();
 });
