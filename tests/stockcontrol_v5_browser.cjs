@@ -38,14 +38,14 @@ async function openPage(viewport={width:1440,height:900}){
 }
 test('navegação dos 11 módulos sem exceções JavaScript',async()=>{
   const {page,context,errors}=await openPage();
-  const pages=['dashboard','inventory','movements','reservations','counts','documents','reports','team','settings','billing','website'];
+  const pages=['dashboard','inventory','movements','reservations','counts','documents','reports','team','settings','billing','website','design'];
   for(const key of pages){
     await page.locator('.side-link[data-nav="'+key+'"]').click();
     assert.ok((await page.locator('h1').innerText()).length>3,'Sem heading em '+key);
     assert.equal(new URL(page.url()).hash,'#'+key);
   }
   await page.screenshot({path:path.join(previews,'desktop-website.png'),fullPage:true});
-  await page.locator('[data-nav="dashboard"]').click();
+  await page.locator('.side-link[data-nav="dashboard"]').click();
   await page.screenshot({path:path.join(previews,'desktop-dashboard.png'),fullPage:true});
   assert.deepEqual(errors,[]);
   await context.close();
@@ -247,7 +247,7 @@ test('inventário indica sem disponibilidade quando reserva absorve todo o stock
   const row=page.locator('tbody tr').filter({hasText:'MAT-001'});
   assert.match(await row.innerText(),/Sem disponibilidade/);
   assert.match(await row.innerText(),/345/);
-  await page.locator('[data-nav="dashboard"]').click();
+  await page.locator('.side-link[data-nav="dashboard"]').click();
   assert.match(await page.locator('.stat-card').nth(2).innerText(),/Sem disponibilidade/);
   await page.locator('[data-action="notifications"]').click();
   assert.match(await page.locator('.notification-list').innerText(),/Sem disponibilidade/);
