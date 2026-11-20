@@ -52,3 +52,18 @@ A versão publicada neste repositório é uma **demonstração autónoma** (HTML
 Reunir a distribuição completa; implementar autorização por empresa e por operação no servidor, migrações seguras e transações de stock; criar uploads privados verificados; testar webhooks Stripe reais em sandbox, recuperação e faturação; executar ensaios E2E PHP/FastAPI e 30 utilizadores concorrentes; validar backup/recovery e instalador no Windows; completar uma revisão de segurança independente.
 
 **Prioridade máxima:** integrar o código completo e auditar a proteção multiempresa em backend. Nenhuma correção puramente visual é substituto desta etapa.
+
+## Ronda adicional — consumo parcial de reservas (20/11/2026)
+
+**Problema encontrado:** a V4 tinha reservas e movimentos de stock independentes, mas não existia uma operação que permitisse consumir uma reserva de forma parcial e consistente. Isso impedia o acompanhamento real do saldo reservado em cada ordem de produção.
+
+**Correções implementadas na demonstração:**
+- Adicionado `consumed` à reserva, mantendo compatibilidade com registos anteriores em que o campo falta (interpretação como 0).
+- Criado o cálculo `reservationRemaining` e o planeamento puro `planConsumption`. A operação rejeita consumos com quantidades inválidas, superiores ao saldo reservado ou sobre reservas canceladas/concluídas.
+- Consumo parcial reduz stock físico e saldo de reserva pela mesma quantidade, sem alterar a disponibilidade livre de outras ordens.
+- Consumo total define o estado `Concluída`. Cancelar após consumo parcial liberta apenas o saldo ainda ativo, sem repor stock já consumido.
+- Criado movimento `Consumo`, com `reservationId`, referência de ordem, `qty` e `delta` negativo. Histórico e exportação CSV mostram a variação assinada.
+- Acrescentados seis testes de domínio e dois testes de navegador (fluxo parcial/total e cancelamento após consumo).
+
+**Limitação:** as alterações são locais ao navegador. O controlo de concorrência transacional entre trabalhadores reais e a autorização por empresa continuam dependentes do backend que não se encontra neste repositório.
+
