@@ -66,6 +66,7 @@ test('criar material, pesquisar e persistir após refresh',async()=>{
   assert.equal(await page.locator('img[onerror]').count(),0,'HTML user-supplied foi interpretado');
   await page.reload();
   await page.locator('[data-nav="inventory"]').click();
+  await page.locator('#inventory-search').fill('QA-001');
   assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
   assert.deepEqual(errors,[]);
   await context.close();
@@ -162,6 +163,7 @@ test('alteração noutra aba fecha formulário desatualizado e sincroniza invent
   await page.waitForFunction(()=>!document.querySelector('.modal'));
   assert.match(await page.locator('#toast').innerText(),/outra aba/i);
   await page.locator('[data-nav="inventory"]').click();
+  await page.locator('#inventory-search').fill('MULTI-01');
   assert.equal(await page.locator('[data-action="detail"][data-sku="MULTI-01"]').count(),1);
   assert.deepEqual(errors,[]);
   await context.close();
