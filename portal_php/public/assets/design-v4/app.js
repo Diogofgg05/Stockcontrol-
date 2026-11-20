@@ -97,7 +97,7 @@
   function checkRole(action){if(!can(action)){toast('Esta ação não é permitida no papel de demonstração '+role+'.','error');return false}return true}
   function eventLog(action){workspace.events.unshift({id:uuid('EV'),action,actor:role+' (demo)',createdAt:now()});workspace.events=workspace.events.slice(0,100)}
   function button(text,action,extra='',disabled=false){return `<button type="button" class="btn ${extra}" data-action="${action}" ${disabled?'disabled':''}>${text}</button>`}
-  const pill=status=>`<span class="pill ${status==='Disponível'||status==='Aplicada'||status==='Ativa'?'good':status==='Esgotado'||status==='Cancelada'?'bad':'warning'}">${E(status)}</span>`;
+  const pill=status=>`<span class="pill ${status==='Disponível'||status==='Aplicada'||status==='Ativa'||status==='Concluída'?'good':status==='Esgotado'||status==='Cancelada'?'bad':'warning'}">${E(status)}</span>`;
   function sidebar(){
     return `<aside class="sidebar ${mobileMenu?'open':''}" aria-label="Menu principal">
       <div class="brand"><div class="brand-logo">${icon('box',24)}</div><div><strong>stockcontrol<span>.</span></strong><small>WORKSPACE INDUSTRIAL</small></div><button class="sidebar-x" data-action="close-menu" aria-label="Fechar menu">${icon('x')}</button></div>
