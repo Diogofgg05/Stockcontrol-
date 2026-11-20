@@ -149,13 +149,13 @@
   function movements(){
     const rows=workspace.movements.filter(m=>movementFilter==='Todos'||m.type===movementFilter);
     return `${pageHeader('RASTREABILIDADE','Movimentos','Entradas, saídas e devoluções com validação do stock disponível.',button(`${icon('download')} Exportar CSV`,'export-movements','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
-      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução','Ajuste'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td><span class="movement-type ${r.type==='Saída'||r.type==='Ajuste'&&r.delta<0?'outflow':'inflow'}">${icon(r.type==='Saída'||r.type==='Ajuste'&&r.delta<0?'arrow-down-right':'arrow-up-right',14)} ${E(r.type)}</span></td><td>${r.type==='Ajuste'&&r.delta>0?'+':''}${num(r.type==='Ajuste'?r.delta:r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
+      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução','Ajuste','Consumo'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td><span class="movement-type ${r.type==='Saída'||r.type==='Consumo'||r.type==='Ajuste'&&r.delta<0?'outflow':'inflow'}">${icon(r.type==='Saída'||r.type==='Consumo'||r.type==='Ajuste'&&r.delta<0?'arrow-down-right':'arrow-up-right',14)} ${E(r.type)}</span></td><td>${r.type==='Ajuste'&&r.delta>0?'+':''}${num(r.type==='Ajuste'||r.type==='Consumo'?r.delta:r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
   }
   function reservations(){
     const rows=workspace.reservations;
-    return `${pageHeader('PLANEAMENTO DE PRODUÇÃO','Reservas','Afeta materiais a ordens e evita consumos acima do disponível.',button(`${icon('plus')} Criar reserva`,'new-reservation','primary'))}
-      <section class="panel"><div class="panel-head"><div><h2>Reservas registadas</h2><p>Reservas ativas reduzem a disponibilidade, sem alterar o stock físico.</p></div></div>
-      ${rows.length?table(['Reserva','Ordem','Material','Quantidade','Estado','Ação'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(r.order)}</td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${pill(r.status)}</td><td>${r.status==='Ativa'?`<button class="link-action" data-action="cancel-reservation" data-id="${E(r.id)}">Cancelar</button>`:'—'}</td></tr>`).join('')):empty('Sem reservas','Cria uma reserva para uma ordem de produção.','layers')}</section>`;
+    return ${pageHeader('PLANEAMENTO DE PRODUÇÃO','Reservas','Reserva materiais, regista consumos parciais e acompanha os saldos por ordem.',button(`${icon('plus')} Criar reserva`,'new-reservation','primary'))}
+      <section class="panel"><div class="panel-head"><div><h2>Reservas registadas</h2><p>Consumos descontam stock físico e saldo reservado na mesma operação local.</p></div></div>
+      ${rows.length?table(['Reserva','Ordem','Material','Reservado','Consumido','Por consumir','Estado','Ação'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(r.order)}</td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${num(r.consumed??0)}</td><td>${num(M.reservationRemaining(r))}</td><td>${pill(r.status)}</td><td>${r.status==='Ativa'?`<div class="row-actions"><button class="link-action" data-action="consume-reservation" data-id="${E(r.id)}">Consumir</button><button class="link-action danger" data-action="cancel-reservation" data-id="${E(r.id)}">Cancelar saldo</button></div>`:'—'}</td></tr>`).join('')):empty('Sem reservas','Cria uma reserva para uma ordem de produção.','layers')}</section>`;
   }
   function counts(){
     const rows=workspace.counts;
@@ -242,6 +242,16 @@
     }else if(kind==='reservation'){
       if(!checkRole('reserve'))return;
       openModal('Criar reserva','A quantidade fica alocada à ordem sem alterar o stock físico.',materialSelect(sku)+field('Ordem de produção','order','text','OP-106','maxlength="40"')+field('Quantidade','qty','number','1','min="0.001" step="0.001"'),'Criar reserva','reservation');
+    }else if(kind==='consume'){
+      if(!checkRole('move'))return;
+      const r=workspace.reservations.find(x=>x.id===sku);
+      if(!r||r.status!=='Ativa')return toast('A reserva não está ativa.','error');
+      openModal('Consumir material reservado','Reserva '+r.id+' · '+r.order+' · saldo '+num(M.reservationRemaining(r))+' '+(getMat(r.sku)?.unit||''),
+        `<div class="detail-grid"><div><small>Material</small><strong>${E(getMat(r.sku)?.name||r.sku)}</strong></div><div><small>Reservado restante</small><strong>${num(M.reservationRemaining(r))}</strong></div></div>`+
+        `<input type="hidden" name="reservationId" value="${E(r.id)}">`+
+        field('Quantidade a consumir','qty','number',String(M.reservationRemaining(r)),'min="0.001" step="0.001"')+
+        `<label class="field-label">Observação (opcional)<textarea name="note" class="field" maxlength="250" rows="2"></textarea></label>`,
+        'Registar consumo','consume');
     }else if(kind==='count'){
       if(!checkRole('count'))return;
       openModal('Nova contagem física','Regista a contagem; a aprovação será efetuada separadamente.',materialSelect(sku)+field('Quantidade contada','counted','number','0','min="0" step="0.001"'),'Guardar contagem','count');
@@ -276,8 +286,23 @@
         const sku=fd.get('sku'),qty=Number(fd.get('qty')),order=String(fd.get('order')||'').trim();
         if(!order||order.length>40)throw Error('Introduz uma ordem de produção válida (até 40 caracteres).');
         M.assertReservation(getMat(sku),qty,workspace.reservations);
-        workspace.reservations.unshift({id:uuid('RS'),sku,qty,order,status:'Ativa',createdAt:now()});
+        workspace.reservations.unshift({id:uuid('RS'),sku,qty,consumed:0,order,status:'Ativa',createdAt:now()});
         eventLog('Reserva criada: '+order);
+      }else if(kind==='consume'){
+        if(!checkRole('move'))return;
+        const reservationId=String(fd.get('reservationId')||'');
+        const reservation=workspace.reservations.find(r=>r.id===reservationId);
+        const material=reservation?getMat(reservation.sku):null;
+        const plan=M.planConsumption(material,reservation,fd.get('qty'),workspace.reservations);
+        material.stock=plan.stock;
+        reservation.consumed=plan.consumed;
+        reservation.status=plan.status;
+        workspace.movements.unshift({
+          id:uuid('MV'),sku:material.sku,type:'Consumo',qty:plan.used,delta:-plan.used,
+          reservationId:reservation.id,order:reservation.order,
+          actor:role+' (demo)',note:String(fd.get('note')||'').trim(),createdAt:now()
+        });
+        eventLog('Consumo da reserva '+reservation.id+': '+num(plan.used)+' '+material.unit);
       }else if(kind==='count'){
         if(!checkRole('count'))return;
         const m=getMat(fd.get('sku')),counted=M.assertCount(m,fd.get('counted'));
@@ -309,7 +334,7 @@
     if(!checkRole('reserve'))return;
     const r=workspace.reservations.find(x=>x.id===id);
     if(!r||r.status!=='Ativa')return toast('A reserva já não está ativa.','error');
-    if(!confirm('Cancelar a reserva '+r.id+'?'))return;
+    if(!confirm('Cancelar o saldo ainda reservado de '+r.id+'? Os consumos já efetuados serão mantidos.'))return;
     const before=JSON.parse(JSON.stringify(workspace));
     try{
       r.status='Cancelada';eventLog('Reserva cancelada: '+id);
@@ -349,7 +374,7 @@
     }else{
       headers=['ID','Data','Material SKU','Tipo','Quantidade','Variação de stock','Responsável','Observação'];
       rows=workspace.movements.map(m=>[m.id,m.createdAt,m.sku,m.type,m.qty,
-        m.type==='Ajuste'?m.delta:(m.type==='Saída'?-m.qty:m.qty),m.actor,m.note||'']);name='stockcontrol-demo-movimentos.csv';
+        m.type==='Ajuste'||m.type==='Consumo'?m.delta:(m.type==='Saída'?-m.qty:m.qty),m.actor,m.note||'']);name='stockcontrol-demo-movimentos.csv';
     }
     const blob=new Blob([M.toCsv(rows,headers)],{type:'text/csv;charset=utf-8'});
     const href=URL.createObjectURL(blob),a=document.createElement('a');a.href=href;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);toast('CSV da demonstração exportado.');
@@ -374,6 +399,7 @@
       case'go-inventory-search':navigate('inventory');document.getElementById('inventory-search')?.focus();break;
       case'go-dashboard':navigate('dashboard');break;
       case'detail':detail(data.sku);break;
+      case'consume-reservation':begin('consume',data.id);break;
       case'cancel-reservation':cancelReservation(data.id);break;
       case'approve-count':countDecision(data.id,true);break;
       case'reject-count':countDecision(data.id,false);break;
