@@ -146,3 +146,40 @@ test('mobile: menu, pesquisa e largura do viewport',async()=>{
   assert.deepEqual(errors,[]);
   await context.close();
 });
+
+test('alteração noutra aba fecha formulário desatualizado e sincroniza inventário',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-action="new-movement"]').click();
+  assert.equal(await page.locator('.modal').count(),1);
+  const second=await context.newPage();
+  await second.goto(url);
+  await second.locator('[data-nav="inventory"]').click();
+  await second.locator('[data-action="add-material"]').click();
+  await second.locator('#modal-form [name="sku"]').fill('MULTI-01');
+  await second.locator('#modal-form [name="name"]').fill('Material outra aba');
+  await second.locator('#modal-form [name="category"]').fill('Teste');
+  await second.locator('#modal-form [type="submit"]').click();
+  await page.waitForFunction(()=>!document.querySelector('.modal'));
+  assert.match(await page.locator('#toast').innerText(),/outra aba/i);
+  await page.locator('[data-nav="inventory"]').click();
+  assert.equal(await page.locator('[data-action="detail"][data-sku="MULTI-01"]').count(),1);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('falha de localStorage não finge persistência definitiva',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.evaluate(()=>{
+    const original=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(key,value){
+      if(key==='stockcontrol:v4:demo:v1')throw new DOMException('Armazenamento bloqueado','QuotaExceededError');
+      return original.call(this,key,value);
+    };
+  });
+  await page.locator('[data-action="new-movement"]').click();
+  await page.locator('#modal-form [name="qty"]').fill('2');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),0);
+  assert.match(await page.locator('#toast').innerText(),/armazenamento local indisponível/i);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
