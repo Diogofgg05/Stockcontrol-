@@ -64,7 +64,7 @@
   let workspace=load();
   let current='dashboard',role='Administrador',search='',category='Todos',movementFilter='Todos',mobileMenu=false;
   let inventorySort='sku',inventoryPage=1;
-  let chartSeries='both';
+  let chartSeries='both',designFilter='Todos';
   const PAGE_SIZE=8;
   let modalReturnFocus=null;
   let stockView=M.inventoryView(workspace);
