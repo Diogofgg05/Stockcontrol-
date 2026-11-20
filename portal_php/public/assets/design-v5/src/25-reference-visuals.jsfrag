@@ -65,7 +65,7 @@
  <div class="demo-components form-showcase"><label>Material<input class="field" value="Conector M12" aria-label="Material de exemplo" readonly></label>
  <label>Categoria<select class="field" aria-label="Categoria de exemplo"><option>Elétrico</option><option>Metais</option></select></label>
  <label>Quantidade<input class="field" type="number" value="24" aria-label="Quantidade de exemplo" readonly></label></div>
- <div class="filters">${['Todos','Disponível','Reservado'].map((v,i)=>`<button type="button" class="filter-btn ${i===0?'active':''}" aria-pressed="${i===0}" data-action="demo-filter" data-demo="${v}">${v}</button>`).join('')}</div></section>
+ <div class="filters">${['Todos','Disponível','Reservado'].map((v,i)=>`<button type="button" class="filter-btn ${designFilter===v?'active':''}" aria-pressed="${designFilter===v}" data-action="demo-filter" data-demo="${v}">${v}</button>`).join('')}</div><p class="catalog-selection" role="status">Estado selecionado: ${E(designFilter)}</p></section>
  <section class="panel design-catalog"><div class="panel-head"><div><h2>Tabelas e dados</h2><p>O mesmo componente utilizado em inventário e relatórios</p></div></div>
  ${table(['Material','Categoria','Stock atual','Disponível','Estado',''],workspace.materials.slice(0,3).map(inventoryRow).join(''))}</section>`;
 }
