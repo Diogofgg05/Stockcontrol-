@@ -153,7 +153,7 @@
   }
   function reservations(){
     const rows=workspace.reservations;
-    return ${pageHeader('PLANEAMENTO DE PRODUÇÃO','Reservas','Reserva materiais, regista consumos parciais e acompanha os saldos por ordem.',button(`${icon('plus')} Criar reserva`,'new-reservation','primary'))}
+    return `${pageHeader('PLANEAMENTO DE PRODUÇÃO','Reservas','Reserva materiais, regista consumos parciais e acompanha os saldos por ordem.',button(`${icon('plus')} Criar reserva`,'new-reservation','primary'))}
       <section class="panel"><div class="panel-head"><div><h2>Reservas registadas</h2><p>Consumos descontam stock físico e saldo reservado na mesma operação local.</p></div></div>
       ${rows.length?table(['Reserva','Ordem','Material','Reservado','Consumido','Por consumir','Estado','Ação'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(r.order)}</td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${num(r.consumed??0)}</td><td>${num(M.reservationRemaining(r))}</td><td>${pill(r.status)}</td><td>${r.status==='Ativa'?`<div class="row-actions"><button class="link-action" data-action="consume-reservation" data-id="${E(r.id)}">Consumir</button><button class="link-action danger" data-action="cancel-reservation" data-id="${E(r.id)}">Cancelar saldo</button></div>`:'—'}</td></tr>`).join('')):empty('Sem reservas','Cria uma reserva para uma ordem de produção.','layers')}</section>`;
   }
