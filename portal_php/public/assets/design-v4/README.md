@@ -13,6 +13,8 @@ Abre `index.html` num navegador recente. Não requer Node.js, PHP, npm ou servid
 - Dados de exemplo calculados: inventário, esgotados, stock baixo, reservas, stock disponível e valor de catálogo.
 - Pesquisa e filtros; adição de materiais fictícios; entradas, saídas e devoluções; reservas e cancelamentos; contagens com aprovação/rejeição; histórico básico de auditoria.
 - Proteção contra saídas de stock reservado, reservas superiores ao disponível, quantidades inválidas, acertos desatualizados e contagens inferiores às reservas ativas.
+- **Consumo parcial de reservas:** consumos descontam a mesma quantidade ao stock físico e ao saldo reservado; consumo total conclui a reserva, e cancelamento posterior só liberta o saldo ainda não consumido. O movimento `Consumo` mantém a referência à reserva, a ordem e a variação negativa assinada.
+- Compatibilidade com reservas antigas da V4 que ainda não possuam o campo `consumed` (interpretado como zero). Testes unitários e testes Chromium demonstram consumo parcial, total e cancelamento após consumo.
 - Exportação CSV de inventário e movimentos com neutralização de fórmulas, escaping HTML e tratamento de erros.
 - Pré-visualização de papéis Administrador, Operador e Auditor. Testes unitários no Node `node --test tests/stockcontrol_v4_model.test.cjs`.
 
