@@ -79,7 +79,7 @@ test('SKUs são normalizados sem alterar outros campos',()=>{
   assert.equal(M.normalizedSku(' mat-a01 '),'MAT-A01');
 });
 test('pré-visualização inclui aviso explícito de dados fictícios',()=>{
-  const root=path.join(__dirname,'../portal_php/public/assets/design-v4');
+  const root=path.join(__dirname,'../portal_php/public/assets/design-v5');
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
   assert.match(html,/Demonstração/);
