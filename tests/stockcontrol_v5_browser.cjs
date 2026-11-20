@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 const {chromium}=require('playwright');
-const root=path.join(__dirname,'../portal_php/public/assets/design-v4');
+const root=path.join(__dirname,'../portal_php/public/assets/design-v5');
 const previews=path.join(__dirname,'v5-previews');
 const allowed=new Set(['index.html','model.js','app.js','styles.css']);
 const server=http.createServer((req,res)=>{
