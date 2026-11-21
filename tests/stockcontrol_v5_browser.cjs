@@ -410,7 +410,7 @@ test('WEB: every route fills width without creating document-level scroll',async
       docHeight:document.documentElement.scrollHeight,screenH:window.innerHeight};
   });
   assert.ok(Math.abs(metrics.shellW-1920)<=2,key+' uses full browser width');
-  assert.ok(metrics.innerW>=metrics.mainW-2,key+' route uses main content width');
+  assert.ok(metrics.innerW>=metrics.mainW-2,key+' route uses main content width '+JSON.stringify(metrics));
   assert.ok(metrics.docWidth<=metrics.screenW+2,key+' avoids document overflow');
   assert.ok(metrics.docHeight<=metrics.screenH+2,key+' scroll stays internal');
  }
