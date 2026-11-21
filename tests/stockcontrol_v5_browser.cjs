@@ -52,7 +52,7 @@ test('navegação dos 11 módulos sem exceções JavaScript',async()=>{
 });
 test('criar material, pesquisar e persistir após refresh',async()=>{
   const {page,context,errors}=await openPage();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
   await page.locator('#modal-form [name="sku"]').fill('QA-001');
   await page.locator('#modal-form [name="name"]').fill('Peça QA <img src=x onerror=alert(1)>');
@@ -65,7 +65,7 @@ test('criar material, pesquisar e persistir após refresh',async()=>{
   assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
   assert.equal(await page.locator('img[onerror]').count(),0,'HTML user-supplied foi interpretado');
   await page.reload();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('#inventory-search').fill('QA-001');
   assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
   assert.deepEqual(errors,[]);
@@ -84,7 +84,7 @@ test('reserva impede saída excessiva, stock válido fica persistido',async()=>{
   await page.locator('#modal-form [type="submit"]').click();
   assert.equal(await page.locator('#modal-form').count(),0);
   await page.reload();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/330/);
   assert.match(await page.locator('.detail-grid').innerText(),/300/);
@@ -119,7 +119,7 @@ test('Auditor não pode criar material e não aparece um modal enganador',async(
   const {page,context}=await openPage();
   await page.locator('.side-link[data-nav="settings"]').click();
   await page.locator('#demo-role').selectOption('Auditor');
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
   assert.match(await page.locator('#toast').textContent(),/não é permitida/);
   assert.equal(await page.locator('.modal').count(),0);
@@ -154,7 +154,7 @@ test('alteração noutra aba fecha formulário desatualizado e sincroniza invent
   assert.equal(await page.locator('.modal').count(),1);
   const second=await context.newPage();
   await second.goto(url);
-  await second.locator('[data-nav="inventory"]').click();
+  await second.locator('.side-link[data-nav="inventory"]').click();
   await second.locator('[data-action="add-material"]').click();
   await second.locator('#modal-form [name="sku"]').fill('MULTI-01');
   await second.locator('#modal-form [name="name"]').fill('Material outra aba');
@@ -162,7 +162,7 @@ test('alteração noutra aba fecha formulário desatualizado e sincroniza invent
   await second.locator('#modal-form [type="submit"]').click();
   await page.waitForFunction(()=>!document.querySelector('.modal'));
   assert.match(await page.locator('#toast').innerText(),/outra aba/i);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('#inventory-search').fill('MULTI-01');
   assert.equal(await page.locator('[data-action="detail"][data-sku="MULTI-01"]').count(),1);
   assert.deepEqual(errors,[]);
@@ -188,7 +188,7 @@ test('falha de localStorage não finge persistência definitiva',async()=>{
 
 test('consumo parcial e total de reserva sem libertação incorreta de stock',async()=>{
   const {page,context,errors}=await openPage();
-  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('.side-link[data-nav="reservations"]').click();
   await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
   await page.locator('#modal-form [name="qty"]').fill('12');
   await page.locator('#modal-form [type="submit"]').click();
@@ -204,7 +204,7 @@ test('consumo parcial e total de reserva sem libertação incorreta de stock',as
   row=page.locator('tbody tr').filter({hasText:'RS-001'});
   assert.match(await row.innerText(),/Concluída/);
   assert.equal(await row.locator('[data-action="consume-reservation"]').count(),0);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/315/);
   assert.deepEqual(errors,[]);
@@ -213,7 +213,7 @@ test('consumo parcial e total de reserva sem libertação incorreta de stock',as
 test('cancelamento após consumo parcial preserva histórico e stock descontado',async()=>{
   const {page,context,errors}=await openPage();
   page.on('dialog',d=>d.accept());
-  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('.side-link[data-nav="reservations"]').click();
   await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
   await page.locator('#modal-form [name="qty"]').fill('12');
   await page.locator('#modal-form [type="submit"]').click();
@@ -221,7 +221,7 @@ test('cancelamento após consumo parcial preserva histórico e stock descontado'
   const row=page.locator('tbody tr').filter({hasText:'RS-001'});
   assert.match(await row.innerText(),/Cancelada/);
   assert.equal(await row.locator('[data-action="consume-reservation"]').count(),0);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/333/);
   assert.match(await page.locator('.detail-grid').innerText(),/0/);
@@ -235,7 +235,7 @@ test('cancelamento após consumo parcial preserva histórico e stock descontado'
 
 test('inventário indica sem disponibilidade quando reserva absorve todo o stock físico',async()=>{
   const {page,context,errors}=await openPage();
-  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('.side-link[data-nav="reservations"]').click();
   page.on('dialog',d=>d.accept());
   await page.locator('[data-action="cancel-reservation"][data-id="RS-001"]').click();
   await page.locator('[data-action="new-reservation"]').click();
@@ -243,7 +243,7 @@ test('inventário indica sem disponibilidade quando reserva absorve todo o stock
   await page.locator('#modal-form [name="order"]').fill('OP-RESERVA-TOTAL');
   await page.locator('#modal-form [name="qty"]').fill('345');
   await page.locator('#modal-form [type="submit"]').click();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   const row=page.locator('tbody tr').filter({hasText:'MAT-001'});
   assert.match(await row.innerText(),/Sem disponibilidade/);
   assert.match(await row.innerText(),/345/);
@@ -266,7 +266,7 @@ test('V5: offline JSON backup can be exported and restored with no network API',
   const parsed=JSON.parse(raw);
   assert.equal(parsed.format,'stockcontrol-offline-backup');
   assert.equal(parsed.workspace.materials.length,8);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
   await page.locator('#modal-form [name="sku"]').fill('OFFLINE-99');
   await page.locator('#modal-form [name="name"]').fill('Offline Recovery Test');
@@ -278,7 +278,7 @@ test('V5: offline JSON backup can be exported and restored with no network API',
     name:'backup.json',mimeType:'application/json',buffer:Buffer.from(raw,'utf8')
   });
   await page.waitForFunction(()=>!localStorage.getItem('stockcontrol:v5:offline:v1')?.includes('OFFLINE-99'));
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   assert.equal(await page.locator('[data-action="detail"][data-sku="OFFLINE-99"]').count(),0);
   assert.deepEqual(errors,[]);
   await context.close();
@@ -366,6 +366,73 @@ test('V6: mobile rail, controls and modal share dark theme',async()=>{
  await page.screenshot({path:path.join(previews,'v6-mobile-modal.png'),fullPage:true});
  await page.keyboard.press('Escape');
  assert.equal(await modal.count(),0);
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+
+test('WEB: application occupies whole browser viewport without floating desktop frame',async()=>{
+ const {page,context,errors}=await openPage({width:1440,height:900});
+ const metrics=await page.evaluate(()=>{
+   const shell=document.querySelector('.app-shell').getBoundingClientRect();
+   const main=document.querySelector('#main-content').getBoundingClientRect();
+   const header=document.querySelector('.header').getBoundingClientRect();
+   const rail=document.querySelector('.sidebar').getBoundingClientRect();
+   const side=document.querySelector('.right-insights').getBoundingClientRect();
+   return {shell:{x:shell.x,y:shell.y,w:shell.width,h:shell.height},
+     bodyScroll:document.documentElement.scrollHeight-document.documentElement.clientHeight,
+     mainWidth:main.width,headerHeight:header.height,railWidth:rail.width,sideWidth:side.width};
+ });
+ assert.ok(Math.abs(metrics.shell.x)<=1,'no exterior left frame');
+ assert.ok(Math.abs(metrics.shell.y)<=1,'no exterior top frame');
+ assert.ok(Math.abs(metrics.shell.w-1440)<=2,'full width web app');
+ assert.ok(Math.abs(metrics.shell.h-900)<=2,'full height web app');
+ assert.ok(metrics.bodyScroll<=2,'document must not have vertical scroll');
+ assert.ok(metrics.mainWidth>700,'use available desktop content width');
+ assert.ok(metrics.headerHeight<=70,'compact web header');
+ assert.ok(metrics.railWidth<=75,'compact web icon rail');
+ assert.ok(metrics.sideWidth>=240&&metrics.sideWidth<=290,'useful compact sidebar');
+ await page.screenshot({path:path.join(previews,'web-full-viewport-1440.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+test('WEB: every route fills width without creating document-level scroll',async()=>{
+ const {page,context,errors}=await openPage({width:1920,height:1080});
+ const keys=['dashboard','inventory','movements','reservations','counts','documents',
+   'reports','team','settings','billing','website','design'];
+ for(const key of keys){
+  await page.locator('.side-link[data-nav="'+key+'"]').click();
+  const metrics=await page.evaluate(()=>{
+    const shell=document.querySelector('.app-shell').getBoundingClientRect();
+    const main=document.querySelector('#main-content').getBoundingClientRect();
+    const inner=document.querySelector('.route-view').getBoundingClientRect();
+    return {shellW:shell.width,mainW:document.querySelector('#main-content').clientWidth,innerW:inner.width,
+      docWidth:document.documentElement.scrollWidth,screenW:window.innerWidth,
+      docHeight:document.documentElement.scrollHeight,screenH:window.innerHeight};
+  });
+  assert.ok(Math.abs(metrics.shellW-1920)<=2,key+' uses full browser width');
+  assert.ok(metrics.innerW>=metrics.mainW-2,key+' route uses main content width '+JSON.stringify(metrics));
+  assert.ok(metrics.docWidth<=metrics.screenW+2,key+' avoids document overflow');
+  assert.ok(metrics.docHeight<=metrics.screenH+2,key+' scroll stays internal');
+ }
+ await page.screenshot({path:path.join(previews,'web-full-viewport-1920.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+test('WEB: mobile uses full screen with scrolling content and no horizontal overflow',async()=>{
+ const {page,context,errors}=await openPage({width:390,height:844});
+ const metrics=await page.evaluate(()=>{
+  const shell=document.querySelector('.app-shell').getBoundingClientRect();
+  const main=document.querySelector('#main-content');
+  return {x:shell.x,w:shell.width,h:shell.height,docW:document.documentElement.scrollWidth,
+    docH:document.documentElement.scrollHeight,mainOverflow:getComputedStyle(main).overflowY};
+ });
+ assert.equal(Math.round(metrics.x),0);
+ assert.equal(Math.round(metrics.w),390);
+ assert.equal(Math.round(metrics.h),844);
+ assert.ok(metrics.docW<=392);
+ assert.ok(metrics.docH<=846);
+ assert.equal(metrics.mainOverflow,'auto');
+ await page.screenshot({path:path.join(previews,'web-full-viewport-mobile.png'),fullPage:true});
  assert.deepEqual(errors,[]);
  await context.close();
 });

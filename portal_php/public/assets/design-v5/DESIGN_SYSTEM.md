@@ -73,3 +73,17 @@ O workflow `.github/workflows/stockcontrol-v6.yml` executa ainda os testes Chrom
 **Nota de fidelidade:** os estilos, cores, proporções e componentes são inspirados na referência. A aplicação mantém o conteúdo real do StockControl, por isso a composição não é uma cópia pixel-a-pixel de uma aplicação diferente.
 
 **Nota técnica:** continua a ser demonstração offline; sem autenticação, RLS, armazenamento de ficheiros ou pagamentos reais.
+
+## Adaptação para aplicação WEB (full viewport)
+
+Esta versão é uma **aplicação web no navegador**, não um executável de desktop nem um mockup com moldura.
+
+- `html`, `body` e `#app` ocupam 100% da área do navegador. `.app-shell` usa `width:100%; height:100dvh; margin:0; border-radius:0; box-shadow:none`.
+- O rail de navegação mantém 72 px no desktop; o header ocupa 68 px, e o resto é dividido em conteúdo flexível e painel de atividade de 274 px.
+- Em largura até 1050 px, o painel de atividade recolhe para libertar espaço ao conteúdo; até 820 px, o rail passa a menu móvel.
+- O scroll vertical é **interno ao conteúdo** e ao painel de atividade. O documento não recebe margens exteriores nem scroll duplicado. As tabelas usam scroll horizontal apenas dentro da respetiva caixa.
+- A altura mínima artificial de 600 px foi retirada. O contêiner `.route-view` mantém o conteúdo de cada página no mesmo padrão flexível sem obrigar a preencher com elementos decorativos.
+- Cards, gráficos, títulos, painéis e filtros utilizam paddings menores e densidade coerente. A área lateral apresenta estatísticas e ações reais da demonstração em vez da ilustração decorativa.
+- Testes Chromium comprovam o viewport real em 1440×900, 1920×1080 e 390×844, incluindo navegação pelas 12 páginas e ausência de overflow do documento.
+
+**Mantém-se offline**: pode ser servido estaticamente por um website; não necessita de instalador Windows, PHP, FastAPI, API ou base de dados remota. Os dados ficam no browser, não há autenticação real nem sincronização entre equipamentos.

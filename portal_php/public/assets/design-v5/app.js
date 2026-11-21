@@ -208,17 +208,20 @@
 }
 
   function activityAside(){
- const recent=workspace.events.slice(0,5);
- const state=stockView;
+ const recent=workspace.events.slice(0,9),state=stockView;
+ const attention=state.low+state.out+state.blocked;
  return `<aside class="right-insights" aria-label="Equipa e atividade">
    <section class="insight-section"><div class="insight-heading"><h2>Equipa</h2><span class="insight-menu">${icon('more-horizontal',18)}</span></div>
-   <p class="insight-subtitle">Ambiente de inventário industrial e operações locais</p>
-   <div class="avatar-stack">${workspace.users.slice(0,4).map((u,i)=>`<span class="people-avatar avatar-${i%4}" title="${E(u.name)}">${E(u.name.split(' ').map(t=>t[0]).slice(0,2).join(''))}</span>`).join('')}<span class="people-count">+${Math.max(0,workspace.users.length-4)}</span></div></section>
-   <section class="insight-section"><div class="insight-heading"><h2>Últimas ações</h2><button class="icon-btn insight-settings" data-nav="reports" title="Ver auditoria">${icon('filter',17)}</button></div>
+   <p class="insight-subtitle">Inventário e produção · ambiente offline</p>
+   <div class="avatar-stack">${workspace.users.slice(0,4).map((u,i)=>`<span class="people-avatar avatar-${i%4}" title="${E(u.name)}">${E(u.name.split(' ').map(t=>t[0]).slice(0,2).join(''))}</span>`).join('')}${workspace.users.length>4?`<span class="people-count">+${workspace.users.length-4}</span>`:''}</div>
+   <div class="aside-stats"><div class="aside-stat"><strong>${num(state.active)}</strong><span>Reservas ativas</span></div><div class="aside-stat"><strong>${num(attention)}</strong><span>Em atenção</span></div></div></section>
+   <section class="insight-section activity-insight"><div class="insight-heading"><h2>Últimas ações</h2><button class="icon-btn insight-settings" data-nav="reports" title="Ver auditoria" aria-label="Ver auditoria">${icon('filter',17)}</button></div>
    <div class="aside-timeline">${recent.length?recent.map((ev,i)=>`<div class="timeline-line"><span class="timeline-dot dot-${i%3}"></span><div><b>${E(ev.action)}</b><small>${day(ev.createdAt)}</small></div></div>`).join(''):`<div class="aside-empty">Sem ações registadas.</div>`}</div>
    <button class="aside-button" data-nav="reports">Ver todas as ações</button></section>
-   <section class="insight-section insight-bottom"><div class="aside-illustration" aria-hidden="true"><span>✦</span></div><div class="insight-kicker">ESTADO ATUAL</div>
-   <h3>${num(state.total-state.low-state.out-state.blocked)} materiais disponíveis</h3><p>Contagem calculada a partir do inventário local.</p></section>
+   <section class="insight-section insight-bottom"><div class="insight-kicker">RESUMO DO ARMAZÉM</div>
+   <h3>${num(state.total-state.low-state.out-state.blocked)} materiais disponíveis</h3>
+   <p>Valores calculados do inventário neste navegador.</p>
+   <div class="aside-quick-actions"><button data-nav="inventory">Inventário</button><button data-nav="reservations">Reservas</button></div></section>
   </aside>`;
 }
 
@@ -344,7 +347,7 @@
   const pages={dashboard,inventory,movements,reservations,counts,documents,reports,team,settings,billing,website,design:componentCatalog,...additionalPages};
   function render(){
     stockView=M.inventoryView(workspace);
-    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<div class="body-columns"><main id="main-content" tabindex="-1">${pages[current]() }<footer class="footer">${icon('shield-check',16)} StockControl V6 Reference Dark · Dados locais · Sem API ou pagamentos reais</footer></main>${activityAside()}</div></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
+    host.innerHTML=`<div class="app-shell">${sidebar()}<div class="app-body">${header()}<div class="body-columns"><main id="main-content" tabindex="-1"><div class="route-view" data-route="${E(current)}">${pages[current]() }</div><footer class="footer">${icon('shield-check',16)} StockControl V6 Reference Dark · Dados locais · Sem API ou pagamentos reais</footer></main>${activityAside()}</div></div></div>${mobileMenu?'<button class="backdrop" data-action="close-menu" aria-label="Fechar menu"></button>':''}`;
     const sortControl=document.getElementById('inventory-sort');
     if(sortControl)sortControl.value=inventorySort;
   }

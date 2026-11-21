@@ -7,7 +7,7 @@ on:
       - 'tests/stockcontrol_v6_*'
       - '.github/workflows/stockcontrol-v6.yml'
   push:
-    branches: ['feat/stockcontrol-v6-reference-dark']
+    branches: ['feat/stockcontrol-v6-reference-dark', 'feat/stockcontrol-v6-web-density']
     paths:
       - 'portal_php/public/assets/design-v5/**'
       - 'tests/stockcontrol_v5_*'
