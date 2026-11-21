@@ -386,6 +386,7 @@ test('V7: a interface bloqueia frações de peças e aceita quantidades inteiras
   await page.locator('#modal-form [name="stock"]').fill('4');
   await page.locator('#modal-form [type="submit"]').click();
   assert.equal(await page.locator('.modal').count(),0);
+  await page.locator('[data-nav="reservations"]').click();
   await page.locator('[data-action="new-reservation"]').click();
   await page.locator('#modal-form [name="sku"]').selectOption('QA-UN-01');
   await page.locator('#modal-form [name="qty"]').fill('0.5');
