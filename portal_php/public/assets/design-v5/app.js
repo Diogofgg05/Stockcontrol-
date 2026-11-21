@@ -246,18 +246,18 @@
  const alerts=lows().slice(0,6);
  const available=s.total-s.low-s.out-s.blocked;
  return `<div class="dashboard-page">
-   <div class="dashboard-title"><div><span class="eyebrow">CONTROLO INDUSTRIAL · OFFLINE</span><h1>Overview</h1><p class="dashboard-subtitle">Materiais, níveis de risco e últimas operações</p></div>
+   <div class="dashboard-title"><div><span class="eyebrow">CONTROLO INDUSTRIAL · OFFLINE</span><h1>Visão geral</h1><p class="dashboard-subtitle">Materiais, níveis de risco e últimas operações</p></div>
    ${button(`${icon('plus',17)} Novo movimento`,'new-movement','primary')}</div>
-   <section class="panel dashboard-chart-panel"><div class="dashboard-panel-head"><div><h2>Stock trend</h2><p class="dashboard-subtitle">Stock físico e livre por referência · dados locais</p></div>
+   <section class="panel dashboard-chart-panel"><div class="dashboard-panel-head"><div><h2>Stock por referência</h2><p class="dashboard-subtitle">Stock físico e livre por referência · comparar apenas materiais da mesma unidade</p></div>
     <div class="segmented" role="group" aria-label="Séries do gráfico"><button type="button" data-series="both" class="${chartSeries==='both'?'active':''}" aria-pressed="${chartSeries==='both'}">Ambos</button><button type="button" data-series="physical" class="${chartSeries==='physical'?'active':''}" aria-pressed="${chartSeries==='physical'}">Físico</button><button type="button" data-series="free" class="${chartSeries==='free'?'active':''}" aria-pressed="${chartSeries==='free'}">Livre</button></div></div>
     <div class="chart-legend"><span><i class="legend-dot"></i> Stock físico</span><span><i class="legend-dot lime"></i> Disponível após reservas</span></div>
     ${stockTrendChart()}
    </section>
-   <section class="panel"><div class="dashboard-panel-head"><h2>Risk founds and stock health</h2><div class="segment-caption">Dados atualizados a partir do inventário</div></div>
+   <section class="panel"><div class="dashboard-panel-head"><h2>Saúde do inventário</h2><div class="segment-caption">Dados atualizados a partir do inventário</div></div>
     <div class="dashboard-risk-summary"><div class="risk-overview">${stockDonut()}<div class="risk-metrics"><div><small>Total de materiais</small><strong>${num(s.total)} <em>100%</em></strong></div><div><small>Materiais em atenção</small><strong>${num(s.low+s.out+s.blocked)} <em>${num(Math.round((s.low+s.out+s.blocked)/Math.max(1,s.total)*100))}%</em></strong></div></div></div>${riskBars()}</div>
    </section>
-   <section class="panel dashboard-alerts"><div class="panel-head"><div><h2>Risk vulnerabilities</h2><p>Materiais abaixo do mínimo, esgotados ou totalmente reservados</p></div>${button('Ver inventário','go-inventory','plain')}</div>
-    <div class="dashboard-alert-table">${alerts.length?table(['Risco','Material','Referência','Livre','Estado',''],alerts.map(m=>`<tr><td>${pill(stockView.statusBySku.get(m.sku)==='Stock baixo'?'Stock baixo':'Sem disponibilidade')}</td><td>${E(m.name)}</td><td>${E(m.sku)}</td><td>${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver material">${icon('chevron-down',16)}</button></td></tr>`).join('')):empty('Sem risco','Todos os materiais têm stock suficiente.','check')}</div>
+   <section class="panel dashboard-alerts"><div class="panel-head"><div><h2>Materiais que precisam de atenção</h2><p>Materiais abaixo do mínimo, esgotados ou totalmente reservados</p></div>${button('Ver inventário','go-inventory','plain')}</div>
+    <div class="dashboard-alert-table">${alerts.length?table(['Risco','Material','Referência','Livre','Estado',''],alerts.map(m=>`<tr><td>${pill(stockView.statusBySku.get(m.sku))}</td><td>${E(m.name)}</td><td>${E(m.sku)}</td><td>${num(stockView.availableBySku.get(m.sku))} ${E(m.unit)}</td><td>${pill(stockView.statusBySku.get(m.sku))}</td><td><button class="table-action" data-action="detail" data-sku="${E(m.sku)}" aria-label="Ver material">${icon('chevron-down',16)}</button></td></tr>`).join('')):empty('Sem risco','Todos os materiais têm stock suficiente.','check')}</div>
    </section>
    <div class="dashboard-bottom-actions">${button(`${icon('download',17)} Exportar inventário`,'export-inventory','secondary')}${button(`${icon('layers',17)} Reservas`,'go-reservations','secondary')}</div>
  </div>`;
