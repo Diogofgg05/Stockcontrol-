@@ -413,7 +413,8 @@
         if(!/^[A-Z0-9][A-Z0-9._-]{1,35}$/.test(sku))throw Error('SKU inválido: usa letras, números, pontos, traços ou sublinhados.');
         if(getMat(sku))throw Error('Já existe um material com esse SKU.');
         const name=String(fd.get('name')||'').trim(),categoryName=String(fd.get('category')||'').trim(),unit=String(fd.get('unit')||'').trim(),location=String(fd.get('location')||'').trim();
-        const stock=M.assertCount({sku},fd.get('stock')),min=M.assertCount({sku},fd.get('min')),cost=Number(fd.get('cost'));
+        const proposed={sku,unit};
+        const stock=M.assertCount(proposed,fd.get('stock')),min=M.assertCount(proposed,fd.get('min')),cost=Number(fd.get('cost'));
         if(!name||name.length>100||!categoryName||categoryName.length>40||!unit||unit.length>10||!location||location.length>36||!Number.isFinite(cost)||cost<0||cost>1000000000)throw Error('Preenche corretamente os dados do material.');
         workspace.materials.push({sku,name,category:categoryName,unit,stock,min,location,cost:Math.round(cost*100)/100});
         eventLog('Material criado: '+sku);
