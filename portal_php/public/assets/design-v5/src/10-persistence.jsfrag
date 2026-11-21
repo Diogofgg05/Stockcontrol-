@@ -1,0 +1,65 @@
+  function save(){
+    if(!M.validateWorkspace(workspace))throw Error('Os dados não passaram na validação de integridade.');
+    try{
+      const existing=localStorage.getItem(STORE);
+      if(existing!==persistedRaw){
+        const error=Error('Os dados foram alterados noutra aba. O formulário foi cancelado e o inventário atualizado.');
+        error.code='CONCURRENT_CHANGE';
+        throw error;
+      }
+      const serialized=JSON.stringify(workspace);
+      localStorage.setItem(STORE,serialized);
+      persistedRaw=serialized;
+      return true;
+    }catch(error){
+      if(error.code==='CONCURRENT_CHANGE')throw error;
+      return false; // A aplicação continua utilizável, mas somente em memória desta aba.
+    }
+  }
+  function saveFeedback(saved,success='Alteração de demonstração registada.'){
+    toast(saved?success:'Alteração válida apenas nesta sessão: armazenamento local indisponível.',saved?'ok':'error');
+  }
+  function recover(error,before){
+    workspace=before;
+    if(error.code==='CONCURRENT_CHANGE'){
+      workspace=load();closeModal();render();
+    }
+    toast(error.message||'Não foi possível validar os dados.','error');
+  }
+  function toast(message,type='ok'){
+    const h=document.getElementById('toast');
+    h.textContent=message;h.dataset.type=type;h.classList.add('visible');
+    clearTimeout(toast.t);toast.t=setTimeout(()=>h.classList.remove('visible'),4000);
+  }
+  function downloadBackup(){
+    try{
+      const json=window.StockBackup.exportBackup(workspace,M);
+      const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='stockcontrol-backup-'+new Date().toISOString().slice(0,10)+'.json';
+      a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      toast('Backup JSON validado e exportado.');
+    }catch(error){toast(error.message,'error')}
+  }
+  async function restoreBackup(file){
+    if(!file||!checkRole('manage'))return;
+    try{
+      if(file.size>window.StockBackup.LIMIT)throw Error('Backup excede 8 MB.');
+      const parsed=window.StockBackup.parseBackup(await file.text(),M);
+      if(!confirm('Substituir todos os dados locais desta V5 pelo backup selecionado? Esta operação não pode ser desfeita sem um backup anterior.'))return;
+      const before=JSON.parse(JSON.stringify(workspace));
+      try{
+        workspace=parsed;
+        const saved=save();
+        if(!saved)throw Error('Falha ao guardar o backup. Verifica o armazenamento local.');
+        current='dashboard';search='';category='Todos';inventoryPage=1;
+        render();toast('Backup restaurado e verificado.');
+      }catch(error){recover(error,before)}
+    }catch(error){toast(error.message||'Backup inválido.','error')}
+  }
+  const getMat=sku=>workspace.materials.find(m=>m.sku===sku);
+  const can=action=>role==='Administrador'||(role==='Operador'&&['move','reserve','count','document'].includes(action));
+  function checkRole(action){if(!can(action)){toast('Esta ação não é permitida no papel de demonstração '+role+'.','error');return false}return true}
+  function eventLog(action){workspace.events.unshift({id:uuid('EV'),action,actor:role+' (demo)',createdAt:now()});workspace.events=workspace.events.slice(0,100)}
+  function button(text,action,extra='',disabled=false){return `<button type="button" class="btn ${extra}" data-action="${action}" ${disabled?'disabled':''}>${text}</button>`}
+  const pill=status=>`<span class="pill ${status==='Disponível'||status==='Aplicada'||status==='Ativa'||status==='Concluída'?'good':status==='Esgotado'||status==='Cancelada'||status==='Sem disponibilidade'?'bad':'warning'}">${E(status)}</span>`;

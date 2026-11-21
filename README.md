@@ -1,3 +1,40 @@
+# StockControl V5 — arquitetura offline sem API
+
+A nova [**V5 Offline Workspace**](portal_php/public/assets/design-v5/) evolui a V4 para uma arquitetura modular, com um bundle executável diretamente no navegador, sem dependências de API ou de base de dados remota.
+
+- [Abrir a V5](portal_php/public/assets/design-v5/index.html)
+- [Manual de utilização](portal_php/public/assets/design-v5/README.md)
+- [Arquitetura e responsabilidades](portal_php/public/assets/design-v5/ARCHITECTURE.md)
+- [Código dividido em módulos](portal_php/public/assets/design-v5/src/)
+- [Workflow de testes V5](.github/workflows/stockcontrol-v5.yml)
+
+**Inclui:** inventário, movimentos, reservas/consumos, contagens, relatórios, backup/restauro JSON com validação, ordenação e paginação. Dados guardados no navegador. A V4 permanece intacta. A V5 **não substitui autenticação, permissões de servidor nem uma solução multiutilizador**.
+
+---
+
+# StockControl — protótipos de interface
+
+## V4 Workspace — evolução de navegação e fluxos
+
+A nova versão em [`portal_php/public/assets/design-v4/`](portal_php/public/assets/design-v4/) disponibiliza 11 páginas navegáveis, inventário de exemplo, movimentos, reservas, contagens físicas, relatórios e validações locais, com design responsivo e testes automatizados. Abre `portal_php/public/assets/design-v4/index.html` para testar no navegador.
+
+**Importante:** a V4 é **um protótipo autónomo de demonstração**, não comunica com o backend nem substitui a distribuição completa. Os dados são fictícios e mantidos apenas no navegador. Consulta as [limitações, testes e integração futura](portal_php/public/assets/design-v4/README.md).
+
+---
+
+## Auditoria e próxima evolução
+
+- [Relatório de bugs, alterações e bloqueadores de publicação](AUDITORIA_STOCKCONTROL_V4.md)
+- [Prompt técnico completo para desenvolvimento, segurança, design e testes](PROMPT_MELHORIAS_STOCKCONTROL.md)
+- [Testes unitários de integridade](tests/stockcontrol_v4_model.test.cjs) e [testes browser Chromium/Playwright](tests/stockcontrol_v4_browser.cjs).
+- Os testes correm no [workflow StockControl V4](.github/workflows/stockcontrol-v4.yml); a execução mais recente determina o estado da validação.
+
+**A V4 é apenas um protótipo.** O backend PHP/FastAPI, as migrações e o instalador não estão publicados neste repositório; não é adequado utilizar dados reais de clientes ou apresentar este projeto como SaaS comercial pronto.
+
+---
+
+
+
 # StockControl — design V3.0
 
 Pré-visualização interativa do novo design do StockControl. Código em [`portal_php/public/assets/design-v3/`](portal_php/public/assets/design-v3/).

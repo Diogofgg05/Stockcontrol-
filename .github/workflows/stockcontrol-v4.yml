@@ -1,0 +1,64 @@
+name: StockControl V4 demo checks
+on:
+  pull_request:
+    paths:
+      - 'portal_php/public/assets/design-v4/**'
+      - 'tests/stockcontrol_v4_model.test.cjs'
+      - 'tests/stockcontrol_v4_browser.cjs'
+      - '.github/workflows/stockcontrol-v4.yml'
+  push:
+    branches: [main, 'feat/stockcontrol-v4-workspace']
+    paths:
+      - 'portal_php/public/assets/design-v4/**'
+      - 'tests/stockcontrol_v4_model.test.cjs'
+      - 'tests/stockcontrol_v4_browser.cjs'
+      - '.github/workflows/stockcontrol-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax checks
+        run: |
+          node --check portal_php/public/assets/design-v4/model.js
+          node --check portal_php/public/assets/design-v4/app.js
+          node --check tests/stockcontrol_v4_model.test.cjs
+      - name: Inventory and frontend boundary tests
+        run: node --test tests/stockcontrol_v4_model.test.cjs
+
+  browser-e2e:
+    # Playwright 1.56.1 nao suporta Ubuntu 26.04 (imagem ubuntu-latest atual).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Browser navigation, operations and mobile smoke tests
+        run: node --test tests/stockcontrol_v4_browser.cjs
+      - name: Preserve rendered desktop/mobile previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-v4-browser-previews
+          path: tests/v4-previews/
+          if-no-files-found: ignore
+          retention-days: 7

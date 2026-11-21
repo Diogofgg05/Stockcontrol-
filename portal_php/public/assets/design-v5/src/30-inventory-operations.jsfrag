@@ -1,0 +1,57 @@
+  function dashboard(){
+    const s=stockView;
+    const recent=workspace.movements.slice(0,5);
+    const alerts=lows().slice(0,5);
+    const attention=alerts.length?alerts.map(m=>`<div class="attention-item"><div class="attention-ico">${icon('alert-triangle',17)}</div><span><b>${E(m.name)}</b><small>${E(m.sku)} · disponíveis ${num(stockView.availableBySku.get(m.sku))} / mín. ${num(m.min)} ${E(m.unit)}</small></span>${pill(stockView.statusBySku.get(m.sku))}</div>`).join(''):empty('Sem alertas','Todos os materiais acima do mínimo.');
+    return `${pageHeader('CENTRO DE OPERAÇÕES','Bom dia, equipa','Uma visão consolidada da operação — dados locais de demonstração.',button(`${icon('download')} Exportar inventário`,'export-inventory','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
+      <div class="section-caption"><b>RESUMO DA OPERAÇÃO</b><span>Valores calculados a partir dos ${s.total} materiais desta demo</span></div>
+      <div class="stats-grid">${stat('Referências registadas',num(s.total),'Materiais no catálogo','package')}${stat('Stock baixo',num(s.low),'Disponível abaixo do mínimo','alert-triangle','amber')}${stat('Sem disponibilidade',num(s.out+s.blocked),'Esgotados ou totalmente reservados','box','rose')}${stat('Reservas ativas',num(s.active),'Quantidade alocada a ordens','layers','violet')}</div>
+      <div class="two-col"><section class="panel"><div class="panel-head"><div><h2>Materiais que precisam de atenção</h2><p>Prioridade de reposição</p></div>${button('Abrir inventário','go-inventory','plain')}</div><div class="attention-list">${attention}</div></section>
+      <section class="panel"><div class="panel-head"><div><h2>Atividade recente</h2><p>Histórico local desta demonstração</p></div>${icon('clock')}</div><div class="activity-list">${recent.length?recent.map(m=>`<div class="activity-item"><span class="activity-ico ${m.type==='Saída'?'amber':'green'}">${icon(m.type==='Saída'?'arrow-down-right':'arrow-up-right',19)}</span><div><b>${E(m.type)} · ${E(getMat(m.sku)?.name||m.sku)}</b><small>${num(m.qty)} ${E(getMat(m.sku)?.unit||'')} · ${E(m.actor)}</small></div><time>${day(m.createdAt)}</time></div>`).join(''):empty('Sem movimentos','Regista a primeira entrada ou saída.','arrow-left-right')}</div></section></div>
+      <section class="panel"><div class="panel-head"><div><h2>Catálogo de materiais</h2><p>Referências mais relevantes para acompanhar</p></div>${button('Ver todos','go-inventory','secondary small')}</div>${table(['Material','Categoria','Stock atual','Disponível','Estado',''],workspace.materials.slice(0,5).map(inventoryRow).join(''))}</section>`;
+  }
+  function inventory(){
+    const s=stockView;
+    const cats=['Todos',...new Set(workspace.materials.map(m=>m.category))];
+    const rows=workspace.materials.filter(m=>(category==='Todos'||category===m.category)&&[m.name,m.sku,m.category,m.location].join(' ').toLowerCase().includes(search.toLowerCase()));
+    rows.sort((a,b)=>{
+      if(inventorySort==='name')return a.name.localeCompare(b.name,'pt');
+      if(inventorySort==='stock')return a.stock-b.stock||a.sku.localeCompare(b.sku);
+      if(inventorySort==='available')return stockView.availableBySku.get(a.sku)-stockView.availableBySku.get(b.sku)||a.sku.localeCompare(b.sku);
+      return a.sku.localeCompare(b.sku);
+    });
+    const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+    inventoryPage=Math.min(pages,Math.max(1,inventoryPage));
+    const visible=rows.slice((inventoryPage-1)*PAGE_SIZE,inventoryPage*PAGE_SIZE);
+    return `${pageHeader('MATERIAIS E ARMAZÉM','Inventário','Pesquisa, níveis mínimos, disponibilidade real após reservas e localização.',button(`${icon('download')} CSV`,'export-inventory','secondary')+button(`${icon('plus')} Adicionar material`,'add-material','primary'))}
+      <div class="stats-grid three">${stat('Materiais',num(s.total),'Referências totais','package')}${stat('Em atenção',num(s.low+s.out+s.blocked),'Baixo, esgotado ou reservado','alert-triangle','amber')}${stat('Valor indicativo',money(s.worth),'Preços de exemplo','chart-no-axes-combined','violet')}</div>
+      <section class="panel"><div class="panel-head"><div><h2>Lista de materiais <span class="count">${rows.length}</span></h2><p>Os dados desta versão permanecem apenas neste navegador.</p></div><div class="inline-search">${icon('search',17)}<input id="inventory-search" placeholder="Nome, SKU, localização..." aria-label="Filtrar inventário" value="${E(search)}"></div><select id="inventory-sort" aria-label="Ordenar inventário"><option value="sku">Código SKU</option><option value="name">Nome A–Z</option><option value="stock">Menor stock físico</option><option value="available">Menor stock livre</option></select></div>
+      <div class="filters">${cats.map(c=>`<button data-category="${E(c)}" class="filter-btn ${category===c?'active':''}">${E(c)}</button>`).join('')}</div>
+      ${rows.length?table(['Material','Categoria','Stock atual','Disponível','Estado',''],visible.map(inventoryRow).join('')):empty('Sem resultados','Altera o termo de pesquisa ou os filtros.','search')}
+      <div class="pager"><span>A mostrar ${visible.length} de ${rows.length} referências filtradas</span><div class="pager-controls"><button type="button" data-action="prev-inventory" ${inventoryPage<=1?'disabled':''}>Anterior</button><span>Página ${inventoryPage} / ${pages}</span><button type="button" data-action="next-inventory" ${inventoryPage>=pages?'disabled':''}>Seguinte</button></div></div></section>`;
+  }
+  function movements(){
+    const rows=workspace.movements.filter(m=>movementFilter==='Todos'||m.type===movementFilter);
+    return `${pageHeader('RASTREABILIDADE','Movimentos','Entradas, saídas e devoluções com validação do stock disponível.',button(`${icon('download')} Exportar CSV`,'export-movements','secondary')+button(`${icon('plus')} Novo movimento`,'new-movement','primary'))}
+      <section class="panel"><div class="panel-head"><div><h2>Histórico de movimentos</h2><p>Registos locais não sincronizados</p></div><div class="filters inline">${['Todos','Entrada','Saída','Devolução','Ajuste','Consumo'].map(c=>`<button data-movfilter="${c}" class="filter-btn ${movementFilter===c?'active':''}">${c}</button>`).join('')}</div></div>${rows.length?table(['Referência','Material','Tipo','Quantidade','Data','Responsável'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td><span class="movement-type ${r.type==='Saída'||r.type==='Consumo'||r.type==='Ajuste'&&r.delta<0?'outflow':'inflow'}">${icon(r.type==='Saída'||r.type==='Consumo'||r.type==='Ajuste'&&r.delta<0?'arrow-down-right':'arrow-up-right',14)} ${E(r.type)}</span></td><td>${r.type==='Ajuste'&&r.delta>0?'+':''}${num(r.type==='Ajuste'||r.type==='Consumo'?r.delta:r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${day(r.createdAt)}</td><td>${E(r.actor)}</td></tr>`).join('')):empty('Sem movimentos','Começa por registar uma entrada ou saída.','arrow-left-right')}</section>`;
+  }
+  function reservations(){
+    const rows=workspace.reservations;
+    return `${pageHeader('PLANEAMENTO DE PRODUÇÃO','Reservas','Reserva materiais, regista consumos parciais e acompanha os saldos por ordem.',button(`${icon('plus')} Criar reserva`,'new-reservation','primary'))}
+      <section class="panel"><div class="panel-head"><div><h2>Reservas registadas</h2><p>Consumos descontam stock físico e saldo reservado na mesma operação local.</p></div></div>
+      ${rows.length?table(['Reserva','Ordem','Material','Reservado','Consumido','Por consumir','Estado','Ação'],rows.map(r=>`<tr><td><b>${E(r.id)}</b></td><td>${E(r.order)}</td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td>${num(r.qty)} ${E(getMat(r.sku)?.unit||'')}</td><td>${num(r.consumed??0)}</td><td>${num(M.reservationRemaining(r))}</td><td>${pill(r.status)}</td><td>${r.status==='Ativa'?`<div class="row-actions"><button class="link-action" data-action="consume-reservation" data-id="${E(r.id)}">Consumir</button><button class="link-action danger" data-action="cancel-reservation" data-id="${E(r.id)}">Cancelar saldo</button></div>`:'—'}</td></tr>`).join('')):empty('Sem reservas','Cria uma reserva para uma ordem de produção.','layers')}</section>`;
+  }
+  function counts(){
+    const rows=workspace.counts;
+    return `${pageHeader('CONFERÊNCIA DE ARMAZÉM','Inventário físico','Regista contagens e aprova acertos com proteção contra alterações entretanto ocorridas.',button(`${icon('plus')} Nova contagem`,'new-count','primary'))}
+      <div class="notice">${icon('info',18)} <span>A aprovação é uma simulação local. Numa aplicação real, as permissões e o bloqueio contra concorrência devem ser aplicados na API.</span></div>
+      <section class="panel"><div class="panel-head"><div><h2>Contagens</h2><p>Fluxo: Registada → Aplicada ou Rejeitada</p></div></div>
+      ${rows.length?table(['Registo','Material','Stock inicial','Contado','Diferença','Estado','Ações'],rows.map(r=>`<tr><td><b>${E(r.id)}</b><small class="small-block">${day(r.createdAt)}</small></td><td>${E(getMat(r.sku)?.name||r.sku)}</td><td>${num(r.expected)}</td><td>${num(r.counted)}</td><td>${num(r.counted-r.expected)}</td><td>${pill(r.status)}</td><td>${r.status==='Pendente'?`<div class="row-actions"><button class="link-action" data-action="approve-count" data-id="${E(r.id)}">Aprovar</button><button class="link-action danger" data-action="reject-count" data-id="${E(r.id)}">Rejeitar</button></div>`:'—'}</td></tr>`).join('')):empty('Sem contagens','Regista uma contagem para comparar com o stock teórico.','clipboard-check')}</section>`;
+  }
+  function documents(){
+    const rows=workspace.documents;
+    return `${pageHeader('FICHEIROS E COMPROVATIVOS','Documentos','Zona de demonstração para anexos, fichas técnicas e guias.',button(`${icon('upload-cloud')} Registar ficheiro`,'new-document','primary'))}
+      <div class="notice">${icon('info',18)} <span>Nesta versão os ficheiros não são enviados nem guardados: apenas o nome e metadados são adicionados à lista local. Não é armazenamento de documentos.</span></div>
+      <section class="panel"><div class="panel-head"><div><h2>Ficheiros associados</h2><p>Pré-visualização do fluxo de documentos</p></div></div>
+      ${rows.length?table(['Ficheiro','Categoria','Dimensão','Material associado','Adicionado'],rows.map(r=>`<tr><td><b>${E(r.name)}</b></td><td>${E(r.category)}</td><td>${num(r.sizeKb)} KB</td><td>${E(getMat(r.sku)?.name||'Geral')}</td><td>${day(r.createdAt)}</td></tr>`).join('')):empty('Nenhum documento','Anexa um ficheiro para testar a interface.','file-text')}</section>`;
+  }

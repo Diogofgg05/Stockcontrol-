@@ -1,0 +1,254 @@
+'use strict';
+const {test,before,after}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const http=require('node:http');
+const {chromium}=require('playwright');
+const root=path.join(__dirname,'../portal_php/public/assets/design-v4');
+const previews=path.join(__dirname,'v4-previews');
+const allowed=new Set(['index.html','model.js','app.js','styles.css']);
+const server=http.createServer((req,res)=>{
+  const name=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname).replace(/^\/+/, '')||'index.html';
+  if(!allowed.has(name)){res.writeHead(404);res.end('Not found');return}
+  const types={html:'text/html; charset=utf-8',js:'application/javascript; charset=utf-8',css:'text/css; charset=utf-8'};
+  const full=path.join(root,name);
+  res.writeHead(200,{'content-type':types[path.extname(name).slice(1)]||'text/plain'});
+  res.end(fs.readFileSync(full));
+});
+let browser,url;
+before(async()=>{
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  url='http://127.0.0.1:'+server.address().port+'/';
+  browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+  fs.mkdirSync(previews,{recursive:true});
+});
+after(async()=>{
+  if(browser)await browser.close();
+  await new Promise(resolve=>server.close(resolve));
+});
+async function openPage(viewport={width:1440,height:900}){
+  const context=await browser.newContext({viewport,acceptDownloads:true});
+  const page=await context.newPage();
+  const errors=[];
+  page.on('pageerror',err=>errors.push(err.message));
+  await page.goto(url,{waitUntil:'load'});
+  await page.locator('h1').waitFor({state:'visible'});
+  return{page,context,errors};
+}
+test('navegação dos 11 módulos sem exceções JavaScript',async()=>{
+  const {page,context,errors}=await openPage();
+  const pages=['dashboard','inventory','movements','reservations','counts','documents','reports','team','settings','billing','website'];
+  for(const key of pages){
+    await page.locator('.side-link[data-nav="'+key+'"]').click();
+    assert.ok((await page.locator('h1').innerText()).length>3,'Sem heading em '+key);
+    assert.equal(new URL(page.url()).hash,'#'+key);
+  }
+  await page.screenshot({path:path.join(previews,'desktop-website.png'),fullPage:true});
+  await page.locator('[data-nav="dashboard"]').click();
+  await page.screenshot({path:path.join(previews,'desktop-dashboard.png'),fullPage:true});
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('criar material, pesquisar e persistir após refresh',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('[data-action="add-material"]').click();
+  await page.locator('#modal-form [name="sku"]').fill('QA-001');
+  await page.locator('#modal-form [name="name"]').fill('Peça QA <img src=x onerror=alert(1)>');
+  await page.locator('#modal-form [name="category"]').fill('Teste');
+  await page.locator('#modal-form [name="stock"]').fill('20');
+  await page.locator('#modal-form [name="min"]').fill('5');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),0);
+  await page.locator('#inventory-search').fill('QA-001');
+  assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
+  assert.equal(await page.locator('img[onerror]').count(),0,'HTML user-supplied foi interpretado');
+  await page.reload();
+  await page.locator('[data-nav="inventory"]').click();
+  assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('reserva impede saída excessiva, stock válido fica persistido',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-action="new-movement"]').click();
+  await page.locator('#modal-form [name="type"]').selectOption('Saída');
+  await page.locator('#modal-form [name="sku"]').selectOption('MAT-001');
+  await page.locator('#modal-form [name="qty"]').fill('316');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.match(await page.locator('#toast').textContent(),/stock disponível/i);
+  assert.equal(await page.locator('#modal-form').count(),1);
+  await page.locator('#modal-form [name="qty"]').fill('15');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('#modal-form').count(),0);
+  await page.reload();
+  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
+  assert.match(await page.locator('.detail-grid').innerText(),/330/);
+  assert.match(await page.locator('.detail-grid').innerText(),/300/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('acerto físico cria movimento assinado no histórico e CSV',async()=>{
+  const {page,context,errors}=await openPage();
+  page.on('dialog',d=>d.accept());
+  await page.locator('[data-nav="counts"]').click();
+  await page.locator('[data-action="new-count"]').click();
+  await page.locator('#modal-form [name="sku"]').selectOption('MAT-005');
+  await page.locator('#modal-form [name="counted"]').fill('195');
+  await page.locator('#modal-form [type="submit"]').click();
+  await page.locator('[data-action="approve-count"]').first().click();
+  assert.match(await page.locator('tbody tr').first().innerText(),/Aplicada/);
+  await page.locator('[data-nav="movements"]').click();
+  await page.locator('[data-movfilter="Ajuste"]').click();
+  assert.equal(await page.locator('tbody tr').count(),1);
+  assert.match(await page.locator('tbody tr').first().innerText(),/-15/);
+  const downloadPromise=page.waitForEvent('download');
+  await page.locator('[data-action="export-movements"]').click();
+  const download=await downloadPromise;
+  const file=await download.path();
+  const csv=fs.readFileSync(file,'utf8');
+  assert.match(csv,/Variação de stock/);
+  assert.match(csv,/-15/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('Auditor não pode criar material e não aparece um modal enganador',async()=>{
+  const {page,context}=await openPage();
+  await page.locator('.side-link[data-nav="settings"]').click();
+  await page.locator('#demo-role').selectOption('Auditor');
+  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('[data-action="add-material"]').click();
+  assert.match(await page.locator('#toast').textContent(),/não é permitida/);
+  assert.equal(await page.locator('.modal').count(),0);
+  await context.close();
+});
+test('estado adulterado no navegador é recusado ao recarregar',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.evaluate(()=>localStorage.setItem('stockcontrol:v4:demo:v1',JSON.stringify({id:'demo',materials:'wrong'})));
+  await page.reload();
+  assert.equal(await page.locator('.stat-card').first().locator('strong').innerText(),'8');
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('mobile: menu, pesquisa e largura do viewport',async()=>{
+  const {page,context,errors}=await openPage({width:390,height:844});
+  await page.locator('[data-action="toggle-menu"]').click();
+  assert.match(await page.locator('.sidebar').getAttribute('class'),/open/);
+  await page.locator('.sidebar [data-nav="inventory"]').click();
+  assert.doesNotMatch(await page.locator('.sidebar').getAttribute('class'),/open/);
+  await page.locator('[data-action="go-inventory-search"]').click();
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'inventory-search');
+  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+  assert.ok(overflow<=2,'A página excede a largura móvel por '+overflow+'px');
+  await page.screenshot({path:path.join(previews,'mobile-inventory.png'),fullPage:true});
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+
+test('alteração noutra aba fecha formulário desatualizado e sincroniza inventário',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-action="new-movement"]').click();
+  assert.equal(await page.locator('.modal').count(),1);
+  const second=await context.newPage();
+  await second.goto(url);
+  await second.locator('[data-nav="inventory"]').click();
+  await second.locator('[data-action="add-material"]').click();
+  await second.locator('#modal-form [name="sku"]').fill('MULTI-01');
+  await second.locator('#modal-form [name="name"]').fill('Material outra aba');
+  await second.locator('#modal-form [name="category"]').fill('Teste');
+  await second.locator('#modal-form [type="submit"]').click();
+  await page.waitForFunction(()=>!document.querySelector('.modal'));
+  assert.match(await page.locator('#toast').innerText(),/outra aba/i);
+  await page.locator('[data-nav="inventory"]').click();
+  assert.equal(await page.locator('[data-action="detail"][data-sku="MULTI-01"]').count(),1);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('falha de localStorage não finge persistência definitiva',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.evaluate(()=>{
+    const original=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(key,value){
+      if(key==='stockcontrol:v4:demo:v1')throw new DOMException('Armazenamento bloqueado','QuotaExceededError');
+      return original.call(this,key,value);
+    };
+  });
+  await page.locator('[data-action="new-movement"]').click();
+  await page.locator('#modal-form [name="qty"]').fill('2');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),0);
+  assert.match(await page.locator('#toast').innerText(),/armazenamento local indisponível/i);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+
+test('consumo parcial e total de reserva sem libertação incorreta de stock',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
+  await page.locator('#modal-form [name="qty"]').fill('12');
+  await page.locator('#modal-form [type="submit"]').click();
+  let row=page.locator('tbody tr').filter({hasText:'RS-001'});
+  assert.match(await row.innerText(),/18/);
+  assert.match(await row.innerText(),/Ativa/);
+  await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
+  await page.locator('#modal-form [name="qty"]').fill('19');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.match(await page.locator('#toast').innerText(),/saldo reservado/i);
+  await page.locator('#modal-form [name="qty"]').fill('18');
+  await page.locator('#modal-form [type="submit"]').click();
+  row=page.locator('tbody tr').filter({hasText:'RS-001'});
+  assert.match(await row.innerText(),/Concluída/);
+  assert.equal(await row.locator('[data-action="consume-reservation"]').count(),0);
+  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
+  assert.match(await page.locator('.detail-grid').innerText(),/315/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+test('cancelamento após consumo parcial preserva histórico e stock descontado',async()=>{
+  const {page,context,errors}=await openPage();
+  page.on('dialog',d=>d.accept());
+  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
+  await page.locator('#modal-form [name="qty"]').fill('12');
+  await page.locator('#modal-form [type="submit"]').click();
+  await page.locator('[data-action="cancel-reservation"][data-id="RS-001"]').click();
+  const row=page.locator('tbody tr').filter({hasText:'RS-001'});
+  assert.match(await row.innerText(),/Cancelada/);
+  assert.equal(await row.locator('[data-action="consume-reservation"]').count(),0);
+  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
+  assert.match(await page.locator('.detail-grid').innerText(),/333/);
+  assert.match(await page.locator('.detail-grid').innerText(),/0/);
+  await page.locator('[data-action="close-modal"]').last().click();
+  await page.locator('[data-nav="movements"]').click();
+  await page.locator('[data-movfilter="Consumo"]').click();
+  assert.match(await page.locator('tbody').innerText(),/12/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
+
+test('inventário indica sem disponibilidade quando reserva absorve todo o stock físico',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-nav="reservations"]').click();
+  page.on('dialog',d=>d.accept());
+  await page.locator('[data-action="cancel-reservation"][data-id="RS-001"]').click();
+  await page.locator('[data-action="new-reservation"]').click();
+  await page.locator('#modal-form [name="sku"]').selectOption('MAT-001');
+  await page.locator('#modal-form [name="order"]').fill('OP-RESERVA-TOTAL');
+  await page.locator('#modal-form [name="qty"]').fill('345');
+  await page.locator('#modal-form [type="submit"]').click();
+  await page.locator('[data-nav="inventory"]').click();
+  const row=page.locator('tbody tr').filter({hasText:'MAT-001'});
+  assert.match(await row.innerText(),/Sem disponibilidade/);
+  assert.match(await row.innerText(),/345/);
+  await page.locator('[data-nav="dashboard"]').click();
+  assert.match(await page.locator('.stat-card').nth(2).innerText(),/Sem disponibilidade/);
+  await page.locator('[data-action="notifications"]').click();
+  assert.match(await page.locator('.notification-list').innerText(),/Sem disponibilidade/);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
