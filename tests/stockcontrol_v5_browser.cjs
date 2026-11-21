@@ -369,3 +369,70 @@ test('V6: mobile rail, controls and modal share dark theme',async()=>{
  assert.deepEqual(errors,[]);
  await context.close();
 });
+
+test('WEB: application occupies whole browser viewport without floating desktop frame',async()=>{
+ const {page,context,errors}=await openPage({width:1440,height:900});
+ const metrics=await page.evaluate(()=>{
+   const shell=document.querySelector('.app-shell').getBoundingClientRect();
+   const main=document.querySelector('#main-content').getBoundingClientRect();
+   const header=document.querySelector('.header').getBoundingClientRect();
+   const rail=document.querySelector('.sidebar').getBoundingClientRect();
+   const side=document.querySelector('.right-insights').getBoundingClientRect();
+   return {shell:{x:shell.x,y:shell.y,w:shell.width,h:shell.height},
+     bodyScroll:document.documentElement.scrollHeight-document.documentElement.clientHeight,
+     mainWidth:main.width,headerHeight:header.height,railWidth:rail.width,sideWidth:side.width};
+ });
+ assert.ok(Math.abs(metrics.shell.x)<=1,'no exterior left frame');
+ assert.ok(Math.abs(metrics.shell.y)<=1,'no exterior top frame');
+ assert.ok(Math.abs(metrics.shell.w-1440)<=2,'full width web app');
+ assert.ok(Math.abs(metrics.shell.h-900)<=2,'full height web app');
+ assert.ok(metrics.bodyScroll<=2,'document must not have vertical scroll');
+ assert.ok(metrics.mainWidth>700,'use available desktop content width');
+ assert.ok(metrics.headerHeight<=70,'compact web header');
+ assert.ok(metrics.railWidth<=75,'compact web icon rail');
+ assert.ok(metrics.sideWidth>=240&&metrics.sideWidth<=290,'useful compact sidebar');
+ await page.screenshot({path:path.join(previews,'web-full-viewport-1440.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+test('WEB: every route fills width without creating document-level scroll',async()=>{
+ const {page,context,errors}=await openPage({width:1920,height:1080});
+ const keys=['dashboard','inventory','movements','reservations','counts','documents',
+   'reports','team','settings','billing','website','design'];
+ for(const key of keys){
+  await page.locator('.side-link[data-nav="'+key+'"]').click();
+  const metrics=await page.evaluate(()=>{
+    const shell=document.querySelector('.app-shell').getBoundingClientRect();
+    const main=document.querySelector('#main-content').getBoundingClientRect();
+    const inner=document.querySelector('.route-view').getBoundingClientRect();
+    return {shellW:shell.width,mainW:main.width,innerW:inner.width,
+      docWidth:document.documentElement.scrollWidth,screenW:window.innerWidth,
+      docHeight:document.documentElement.scrollHeight,screenH:window.innerHeight};
+  });
+  assert.ok(Math.abs(metrics.shellW-1920)<=2,key+' uses full browser width');
+  assert.ok(metrics.innerW>=metrics.mainW-2,key+' route uses main content width');
+  assert.ok(metrics.docWidth<=metrics.screenW+2,key+' avoids document overflow');
+  assert.ok(metrics.docHeight<=metrics.screenH+2,key+' scroll stays internal');
+ }
+ await page.screenshot({path:path.join(previews,'web-full-viewport-1920.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
+test('WEB: mobile uses full screen with scrolling content and no horizontal overflow',async()=>{
+ const {page,context,errors}=await openPage({width:390,height:844});
+ const metrics=await page.evaluate(()=>{
+  const shell=document.querySelector('.app-shell').getBoundingClientRect();
+  const main=document.querySelector('#main-content');
+  return {x:shell.x,w:shell.width,h:shell.height,docW:document.documentElement.scrollWidth,
+    docH:document.documentElement.scrollHeight,mainOverflow:getComputedStyle(main).overflowY};
+ });
+ assert.equal(Math.round(metrics.x),0);
+ assert.equal(Math.round(metrics.w),390);
+ assert.equal(Math.round(metrics.h),844);
+ assert.ok(metrics.docW<=392);
+ assert.ok(metrics.docH<=846);
+ assert.equal(metrics.mainOverflow,'auto');
+ await page.screenshot({path:path.join(previews,'web-full-viewport-mobile.png'),fullPage:true});
+ assert.deepEqual(errors,[]);
+ await context.close();
+});
