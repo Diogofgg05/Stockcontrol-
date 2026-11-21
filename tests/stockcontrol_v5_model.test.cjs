@@ -308,3 +308,49 @@ test('backup não modifica o workspace e mantém versão explícita',()=>{
   assert.equal(JSON.parse(serialized).format,Backup.FORMAT);
   assert.equal(JSON.parse(serialized).version,Backup.VERSION);
 });
+
+test('V7: backups rejeitam equipa com tipos inválidos ou estrutura ausente',()=>{
+  const cases=[
+    w=>{delete w.users;},
+    w=>{w.users='Administrador';},
+    w=>{w.users=[null];},
+    w=>{w.users=[{name:12,role:'Administrador',state:'Ativo'}];},
+    w=>{w.users=[{name:'<script>',role:'Superadmin',state:'Ativo'}];},
+    w=>{w.users=[{name:'Teste',role:'Operador',state:{}}];},
+    w=>{w.name={toString:'não válido'};}
+  ];
+  for(const mutate of cases){
+    const w=demo();mutate(w);
+    assert.equal(M.validateWorkspace(w),false,'estado de equipa inválido tem de ser rejeitado');
+    const backup=JSON.parse(Backup.exportBackup(demo(),M));
+    backup.workspace=w;
+    assert.throws(()=>Backup.parseBackup(JSON.stringify(backup),M),/Backup rejeitado/);
+  }
+});
+test('V7: quantidades inteiras para peças físicas, mas decimais para kg e metros',()=>{
+  const w=demo();
+  const un=w.materials.find(m=>m.unit==='un');
+  const kg=w.materials.find(m=>m.unit==='kg');
+  const metros=w.materials.find(m=>m.unit==='m');
+  assert.ok(un&&kg&&metros);
+  assert.equal(M.isDiscreteUnit(un),true);
+  assert.equal(M.isDiscreteUnit(kg),false);
+  assert.throws(()=>M.assertCount(un,0.5),/inteiras/);
+  assert.throws(()=>M.assertReservation(un,0.5,w.reservations),/inteiras/);
+  assert.throws(()=>M.newStock(un,'Entrada',0.5,w.reservations),/inteiras/);
+  assert.throws(()=>M.newStock(un,'Saída',0.5,w.reservations),/inteiras/);
+  assert.equal(M.assertCount(un,0),0);
+  assert.equal(M.assertCount(kg,1.125),1.125);
+  assert.equal(M.assertCount(metros,0.25),0.25);
+});
+test('V7: consumo parcial de unidade não pode produzir fração de peça',()=>{
+  const w=demo(),m=w.materials.find(m=>m.sku==='MAT-007'),r=w.reservations.find(r=>r.sku==='MAT-007');
+  assert.throws(()=>M.planConsumption(m,r,0.5,w.reservations),/inteiras/);
+  assert.equal(M.planConsumption(m,r,1,w.reservations).used,1);
+});
+test('V7: modelos com unidade são usados ao criar materiais',()=>{
+  const app=fs.readFileSync(path.join(__dirname,'../portal_php/public/assets/design-v5/app.js'),'utf8');
+  assert.match(app,/const proposed=\{sku,unit\}/);
+  assert.match(app,/M.assertCount\(proposed,fd.get\('stock'\)\)/);
+  assert.match(app,/M.assertCount\(proposed,fd.get\('min'\)\)/);
+});

@@ -33,6 +33,21 @@
       Number.isSafeInteger(Math.round(n*1000)) && Math.abs(n*1000-Math.round(n*1000))<1e-7;
   };
   const roundQty = n => Math.round(n*1000)/1000;
+  // Peças discretas nunca devem permitir frações (ex.: 0,25 parafusos).
+  // A regra é aplicada nas novas operações; estados legados permanecem legíveis
+  // para que uma atualização não destrua alterações locais do utilizador.
+  const DISCRETE_UNITS = new Set(['un','uni','unidade','unidades','pc','pcs','peça','peças','peca','pecas','pç','pçs']);
+  function isDiscreteUnit(m) {
+    return DISCRETE_UNITS.has(String(m?.unit||'').trim().toLocaleLowerCase('pt-PT'));
+  }
+  function assertUnitQuantity(m,value,zeroAllowed=false) {
+    if(!m)throw Error('Material inexistente.');
+    if(!preciseQty(value,zeroAllowed))throw Error('Introduz uma quantidade válida (até 3 casas decimais).');
+    const n=Number(value);
+    if(isDiscreteUnit(m)&&!Number.isInteger(n))
+      throw Error('Materiais contados à unidade exigem quantidades inteiras.');
+    return n;
+  }
   function reservationRemaining(r){
     if(!r||r.status!=='Ativa')return 0;
     return Math.max(0,roundQty(Number(r.qty)-Number(r.consumed??0)));
@@ -46,7 +61,8 @@
     if(!m||!r||r.sku!==m.sku)throw Error('Reserva ou material inexistente.');
     if(r.status!=='Ativa')throw Error('A reserva já não está ativa.');
     if(!positiveQty(amount))throw Error('Indica uma quantidade positiva válida.');
-    const remaining=reservationRemaining(r),qty=Number(amount);
+    const qty=assertUnitQuantity(m,amount);
+    const remaining=reservationRemaining(r);
     if(qty>remaining)throw Error('O consumo ultrapassa o saldo reservado.');
     if(qty>m.stock)throw Error('Stock físico insuficiente.');
     const stock=roundQty(m.stock-qty);
@@ -62,6 +78,7 @@
     if(!m)throw Error('Material inexistente.');
     if(!['Entrada','Saída','Devolução'].includes(type))throw Error('Tipo de movimento inválido.');
     if(!positiveQty(qty))throw Error('Introduz uma quantidade positiva (até 3 casas decimais).');
+    assertUnitQuantity(m,qty);
     if(type==='Saída'&&Number(qty)>available(m,reservations))throw Error('Quantidade superior ao stock disponível após reservas.');
     if(type!=='Saída'&&roundQty(m.stock+Number(qty))>MAX_QTY)throw Error('O stock máximo de demonstração foi excedido.');
     return true;
@@ -74,13 +91,14 @@
   function assertReservation(m,qty,reservations){
     if(!m)throw Error('Material inexistente.');
     if(!positiveQty(qty))throw Error('A quantidade tem de ser positiva.');
+    assertUnitQuantity(m,qty);
     if(Number(qty)>available(m,reservations))throw Error('Stock disponível insuficiente para esta reserva.');
     return true;
   }
   function assertCount(m,value){
     if(!m)throw Error('Material inexistente.');
     if(!preciseQty(value,true))throw Error('A contagem tem de ser zero ou superior (até 3 casas decimais).');
-    return Number(value);
+    return assertUnitQuantity(m,value,true);
   }
   // Agregação O(materiais + reservas), em vez de recalcular todas as
   // reservas para cada linha e indicador do dashboard.
@@ -115,6 +133,13 @@
     const lists={materials:5000,reservations:20000,movements:20000,counts:20000,events:200,documents:2000};
     if(!Object.entries(lists).every(([k,max])=>Array.isArray(w[k])&&w[k].length<=max))return false;
     if(!w.materials.length)return false;
+    // O painel de equipa assume uma lista de utilizadores com nomes legíveis.
+    // Backups JSON adulterados não podem injetar tipos que rebentem o render().
+    if(!Array.isArray(w.users)||w.users.length>100||!w.users.every(u=>
+      u&&typeof u==='object'&&validString(u.name,100)
+      &&['Administrador','Operador','Auditor'].includes(u.role)
+      &&['Ativo','Inativo','Pendente'].includes(u.state)))return false;
+    if(typeof w.name!=='string'||!w.name.trim()||w.name.length>100)return false;
     const skuSet=new Set();
     for(const m of w.materials){
       if(!m||typeof m!=='object'||!validString(m.sku,36)||!(/^[A-Z0-9][A-Z0-9._-]{1,35}$/.test(m.sku))||skuSet.has(m.sku)
@@ -160,7 +185,7 @@
   }
   function toCsv(rows,headers){return '\ufeff'+[headers,...rows].map(row=>row.map(csvCell).join(';')).join('\r\n')+'\r\n'}
   function normalizedSku(v){return String(v||'').trim().toUpperCase()}
-  const api={demo,status,inventoryView,reserved,reservationRemaining,planConsumption,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
+  const api={demo,status,inventoryView,reserved,reservationRemaining,planConsumption,available,positiveQty,isDiscreteUnit,assertUnitQuantity,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(typeof window!=='undefined')window.StockModel=api;
 })();
