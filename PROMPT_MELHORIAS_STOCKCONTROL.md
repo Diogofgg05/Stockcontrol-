@@ -57,3 +57,18 @@ E) Lista de migrações, riscos, impacto em dados e plano de rollback.
 F) Roteiro dos restantes bloqueadores, priorizado por impacto e esforço.
 
 **Não inventes testes, dados, capturas, resultados, endpoints, credenciais nem integrações.** Se o backend completo não estiver acessível, limitar a execução à demo, indicar explicitamente a limitação e não afirmar que o SaaS foi corrigido por completo.
+
+## Estado das branches e integração — atualização de 21/11/2026
+
+Verificar novamente os SHAs e estados antes de trabalhar, pois as branches podem ter mudado:
+
+| PR | Implementação | Base |
+| --- | --- | --- |
+| #1 | V5 offline + correções/auditoria V4 | `main` |
+| #2 | V6 design system de referência | PR #1 |
+| #3 | V7 integridade e validações | PR #2 |
+| #4 | V6 web full viewport e densidade compacta | PR #2 |
+
+**Não assumir que os PRs #3 e #4 estão combinados.** São branches irmãs, não uma evolução linear. Comparar diffs, resolver conflitos mantendo simultaneamente as correções de integridade e a experiência visual, acrescentar testes de regressão que provem ambos os grupos de alterações e só depois propor uma integração numa branch temporária. Confirmar no GitHub Actions que o SHA exato da integração passou.
+
+**Não fazer merge automático na `main` sem revisão humana.** O objetivo imediato é qualidade e funcionamento da demonstração. Para a aplicação SaaS real, é indispensável recuperar primeiro os módulos FastAPI/PHP e validar migrações, autorização, transações e configuração operacional.
