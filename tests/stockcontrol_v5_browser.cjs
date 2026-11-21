@@ -405,7 +405,7 @@ test('WEB: every route fills width without creating document-level scroll',async
     const shell=document.querySelector('.app-shell').getBoundingClientRect();
     const main=document.querySelector('#main-content').getBoundingClientRect();
     const inner=document.querySelector('.route-view').getBoundingClientRect();
-    return {shellW:shell.width,mainW:main.width,innerW:inner.width,
+    return {shellW:shell.width,mainW:document.querySelector('#main-content').clientWidth,innerW:inner.width,
       docWidth:document.documentElement.scrollWidth,screenW:window.innerWidth,
       docHeight:document.documentElement.scrollHeight,screenH:window.innerHeight};
   });
