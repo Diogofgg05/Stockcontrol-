@@ -666,3 +666,8 @@ html,body{background:var(--sc-bg);overflow:hidden}
   .stat-card{min-height:87px;padding:12px}
   .filters,.pager,.settings-section{padding-left:14px;padding-right:14px}
 }
+
+/* Web route box model — prevent shrink-to-intrinsic width of flex children. */
+#main-content{align-items:stretch}
+.route-view{width:100%;max-width:100%;box-sizing:border-box;align-self:stretch;flex-shrink:0}
+.route-view>.panel,.route-view>.two-col,.route-view>.dashboard-page{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
