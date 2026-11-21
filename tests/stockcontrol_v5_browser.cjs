@@ -369,3 +369,32 @@ test('V6: mobile rail, controls and modal share dark theme',async()=>{
  assert.deepEqual(errors,[]);
  await context.close();
 });
+
+test('V7: a interface bloqueia frações de peças e aceita quantidades inteiras',async()=>{
+  const {page,context,errors}=await openPage();
+  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('[data-action="add-material"]').click();
+  await page.locator('#modal-form [name="sku"]').fill('QA-UN-01');
+  await page.locator('#modal-form [name="name"]').fill('Material contado');
+  await page.locator('#modal-form [name="category"]').fill('Teste');
+  await page.locator('#modal-form [name="unit"]').fill('un');
+  await page.locator('#modal-form [name="stock"]').fill('0.5');
+  await page.locator('#modal-form [name="min"]').fill('0');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),1);
+  assert.match(await page.locator('#toast').textContent(),/inteiras/i);
+  await page.locator('#modal-form [name="stock"]').fill('4');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),0);
+  await page.locator('[data-action="new-reservation"]').click();
+  await page.locator('#modal-form [name="sku"]').selectOption('QA-UN-01');
+  await page.locator('#modal-form [name="qty"]').fill('0.5');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),1);
+  assert.match(await page.locator('#toast').textContent(),/inteiras/i);
+  await page.locator('#modal-form [name="qty"]').fill('2');
+  await page.locator('#modal-form [type="submit"]').click();
+  assert.equal(await page.locator('.modal').count(),0);
+  assert.deepEqual(errors,[]);
+  await context.close();
+});
