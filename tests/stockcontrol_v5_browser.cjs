@@ -52,7 +52,7 @@ test('navegação dos 11 módulos sem exceções JavaScript',async()=>{
 });
 test('criar material, pesquisar e persistir após refresh',async()=>{
   const {page,context,errors}=await openPage();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
   await page.locator('#modal-form [name="sku"]').fill('QA-001');
   await page.locator('#modal-form [name="name"]').fill('Peça QA <img src=x onerror=alert(1)>');
@@ -65,7 +65,7 @@ test('criar material, pesquisar e persistir após refresh',async()=>{
   assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
   assert.equal(await page.locator('img[onerror]').count(),0,'HTML user-supplied foi interpretado');
   await page.reload();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('#inventory-search').fill('QA-001');
   assert.equal(await page.locator('[data-action="detail"][data-sku="QA-001"]').count(),1);
   assert.deepEqual(errors,[]);
@@ -84,7 +84,7 @@ test('reserva impede saída excessiva, stock válido fica persistido',async()=>{
   await page.locator('#modal-form [type="submit"]').click();
   assert.equal(await page.locator('#modal-form').count(),0);
   await page.reload();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/330/);
   assert.match(await page.locator('.detail-grid').innerText(),/300/);
@@ -119,7 +119,7 @@ test('Auditor não pode criar material e não aparece um modal enganador',async(
   const {page,context}=await openPage();
   await page.locator('.side-link[data-nav="settings"]').click();
   await page.locator('#demo-role').selectOption('Auditor');
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
   assert.match(await page.locator('#toast').textContent(),/não é permitida/);
   assert.equal(await page.locator('.modal').count(),0);
@@ -154,7 +154,7 @@ test('alteração noutra aba fecha formulário desatualizado e sincroniza invent
   assert.equal(await page.locator('.modal').count(),1);
   const second=await context.newPage();
   await second.goto(url);
-  await second.locator('[data-nav="inventory"]').click();
+  await second.locator('.side-link[data-nav="inventory"]').click();
   await second.locator('[data-action="add-material"]').click();
   await second.locator('#modal-form [name="sku"]').fill('MULTI-01');
   await second.locator('#modal-form [name="name"]').fill('Material outra aba');
@@ -162,7 +162,7 @@ test('alteração noutra aba fecha formulário desatualizado e sincroniza invent
   await second.locator('#modal-form [type="submit"]').click();
   await page.waitForFunction(()=>!document.querySelector('.modal'));
   assert.match(await page.locator('#toast').innerText(),/outra aba/i);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('#inventory-search').fill('MULTI-01');
   assert.equal(await page.locator('[data-action="detail"][data-sku="MULTI-01"]').count(),1);
   assert.deepEqual(errors,[]);
@@ -188,7 +188,7 @@ test('falha de localStorage não finge persistência definitiva',async()=>{
 
 test('consumo parcial e total de reserva sem libertação incorreta de stock',async()=>{
   const {page,context,errors}=await openPage();
-  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('.side-link[data-nav="reservations"]').click();
   await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
   await page.locator('#modal-form [name="qty"]').fill('12');
   await page.locator('#modal-form [type="submit"]').click();
@@ -204,7 +204,7 @@ test('consumo parcial e total de reserva sem libertação incorreta de stock',as
   row=page.locator('tbody tr').filter({hasText:'RS-001'});
   assert.match(await row.innerText(),/Concluída/);
   assert.equal(await row.locator('[data-action="consume-reservation"]').count(),0);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/315/);
   assert.deepEqual(errors,[]);
@@ -213,7 +213,7 @@ test('consumo parcial e total de reserva sem libertação incorreta de stock',as
 test('cancelamento após consumo parcial preserva histórico e stock descontado',async()=>{
   const {page,context,errors}=await openPage();
   page.on('dialog',d=>d.accept());
-  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('.side-link[data-nav="reservations"]').click();
   await page.locator('[data-action="consume-reservation"][data-id="RS-001"]').click();
   await page.locator('#modal-form [name="qty"]').fill('12');
   await page.locator('#modal-form [type="submit"]').click();
@@ -221,7 +221,7 @@ test('cancelamento após consumo parcial preserva histórico e stock descontado'
   const row=page.locator('tbody tr').filter({hasText:'RS-001'});
   assert.match(await row.innerText(),/Cancelada/);
   assert.equal(await row.locator('[data-action="consume-reservation"]').count(),0);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="detail"][data-sku="MAT-001"]').click();
   assert.match(await page.locator('.detail-grid').innerText(),/333/);
   assert.match(await page.locator('.detail-grid').innerText(),/0/);
@@ -235,7 +235,7 @@ test('cancelamento após consumo parcial preserva histórico e stock descontado'
 
 test('inventário indica sem disponibilidade quando reserva absorve todo o stock físico',async()=>{
   const {page,context,errors}=await openPage();
-  await page.locator('[data-nav="reservations"]').click();
+  await page.locator('.side-link[data-nav="reservations"]').click();
   page.on('dialog',d=>d.accept());
   await page.locator('[data-action="cancel-reservation"][data-id="RS-001"]').click();
   await page.locator('[data-action="new-reservation"]').click();
@@ -243,7 +243,7 @@ test('inventário indica sem disponibilidade quando reserva absorve todo o stock
   await page.locator('#modal-form [name="order"]').fill('OP-RESERVA-TOTAL');
   await page.locator('#modal-form [name="qty"]').fill('345');
   await page.locator('#modal-form [type="submit"]').click();
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   const row=page.locator('tbody tr').filter({hasText:'MAT-001'});
   assert.match(await row.innerText(),/Sem disponibilidade/);
   assert.match(await row.innerText(),/345/);
@@ -266,7 +266,7 @@ test('V5: offline JSON backup can be exported and restored with no network API',
   const parsed=JSON.parse(raw);
   assert.equal(parsed.format,'stockcontrol-offline-backup');
   assert.equal(parsed.workspace.materials.length,8);
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   await page.locator('[data-action="add-material"]').click();
   await page.locator('#modal-form [name="sku"]').fill('OFFLINE-99');
   await page.locator('#modal-form [name="name"]').fill('Offline Recovery Test');
@@ -278,7 +278,7 @@ test('V5: offline JSON backup can be exported and restored with no network API',
     name:'backup.json',mimeType:'application/json',buffer:Buffer.from(raw,'utf8')
   });
   await page.waitForFunction(()=>!localStorage.getItem('stockcontrol:v5:offline:v1')?.includes('OFFLINE-99'));
-  await page.locator('[data-nav="inventory"]').click();
+  await page.locator('.side-link[data-nav="inventory"]').click();
   assert.equal(await page.locator('[data-action="detail"][data-sku="OFFLINE-99"]').count(),0);
   assert.deepEqual(errors,[]);
   await context.close();
