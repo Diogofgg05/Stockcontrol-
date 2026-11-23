@@ -47,6 +47,13 @@ def normalize_email(value):
     return clean
 
 
+def clean_name(value, field, limit):
+    cleaned = str(value).strip()
+    if len(cleaned) < 2 or len(cleaned) > limit:
+        raise ValueError(f"{field} deve ter entre 2 e {limit} caracteres.")
+    return cleaned
+
+
 def strong_password(value):
     if not isinstance(value, str) or len(value) < 12 or len(value) > 128:
         raise ValueError("A palavra-passe deve ter entre 12 e 128 caracteres.")
@@ -204,6 +211,9 @@ def provision_company(db, code, name, sector, admin_name, admin_email, password)
     if not re.fullmatch(r"[A-Z0-9-]{2,24}", code):
         raise ValueError("Código de empresa inválido.")
     email = normalize_email(admin_email)
+    name = clean_name(name, "Empresa", 100)
+    sector = clean_name(sector, "Setor", 100)
+    admin_name = clean_name(admin_name, "Administrador", 80)
     strong_password(password)
     if db.scalar(select(Company.id).where(Company.code == code)):
         raise ValueError("Código de empresa já existe.")
@@ -368,8 +378,13 @@ def create_app(database_url=None, setup_key=None):
     def update_company(payload: CompanyPatch, ctx=Depends(require("Administrador")),
                        db: Session = Depends(db_session)):
         user, company, _ = ctx
-        company.name = payload.name.strip()
-        company.sector = payload.sector.strip()
+        try:
+            name = clean_name(payload.name, "Empresa", 100)
+            sector = clean_name(payload.sector, "Setor", 100)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        company.name = name
+        company.sector = sector
         audit(db, company.id, user.id, "company.updated", "company", company.id)
         db.commit()
         return company_public(company)
@@ -392,7 +407,11 @@ def create_app(database_url=None, setup_key=None):
             raise HTTPException(422, str(exc)) from exc
         if db.scalar(select(User.id).where(User.company_id == company.id, User.email == email)):
             raise HTTPException(409, "Este email já está registado nesta empresa.")
-        user = User(company_id=company.id, name=payload.name.strip(), email=email,
+        try:
+            name = clean_name(payload.name, "Utilizador", 80)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        user = User(company_id=company.id, name=name, email=email,
                     role=payload.role, password_hash=ph.hash(payload.password))
         db.add(user)
         db.flush()
@@ -415,7 +434,10 @@ def create_app(database_url=None, setup_key=None):
             if account_count(db, company.id) <= 1:
                 raise HTTPException(409, "A empresa precisa de um administrador ativo.")
         if payload.name is not None:
-            user.name = payload.name.strip()
+            try:
+                user.name = clean_name(payload.name, "Utilizador", 80)
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from exc
         user.role = new_role
         user.active = new_active
         if not new_active:
@@ -458,8 +480,13 @@ def create_app(database_url=None, setup_key=None):
         code = payload.code.strip().upper()
         if db.scalar(select(Warehouse.id).where(Warehouse.company_id == company.id, Warehouse.code == code)):
             raise HTTPException(409, "Este código já existe na empresa.")
+        try:
+            name = clean_name(payload.name, "Armazém", 80)
+            location = clean_name(payload.location, "Localização", 120)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
         warehouse = Warehouse(company_id=company.id, code=code,
-                              name=payload.name.strip(), location=payload.location.strip())
+                              name=name, location=location)
         db.add(warehouse)
         db.flush()
         audit(db, company.id, actor.id, "warehouse.created", "warehouse", warehouse.id, code)
@@ -481,10 +508,13 @@ def create_app(database_url=None, setup_key=None):
                 Warehouse.company_id == company.id, Warehouse.active.is_(True))) or 0
             if n <= 1:
                 raise HTTPException(409, "É obrigatório manter um armazém ativo.")
-        if payload.name is not None:
-            warehouse.name = payload.name.strip()
-        if payload.location is not None:
-            warehouse.location = payload.location.strip()
+        try:
+            if payload.name is not None:
+                warehouse.name = clean_name(payload.name, "Armazém", 80)
+            if payload.location is not None:
+                warehouse.location = clean_name(payload.location, "Localização", 120)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
         if payload.active is not None:
             warehouse.active = payload.active
         audit(db, company.id, actor.id, "warehouse.updated", "warehouse", warehouse.id)
