@@ -544,7 +544,7 @@ def create_app(database_url=None, setup_key=None):
             raise HTTPException(422, "Paginação inválida.")
         query = select(AuditEvent).where(AuditEvent.company_id == ctx[1].id)
         if action:
-            if len(action) > 80 or not re.fullmatch(r"[a-zA-Z0-9_.-]+", action):
+            if len(action) > 80 or not re.fullmatch(r"[\w.-]+", action):
                 raise HTTPException(422, "Filtro de ação inválido.")
             query = query.where(AuditEvent.action == action)
         if target_type:
