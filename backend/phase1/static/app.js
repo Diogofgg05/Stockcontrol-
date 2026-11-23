@@ -288,6 +288,7 @@
   const pages={dashboard,users,warehouses,audit,company,...operationalPages};
   async function render(){
     const container=by('content');
+    window.StockControlUXReset?.();
     container.replaceChildren();
     by('breadcrumb-page').textContent=navLinks.find(x=>x[0]===page)?.[2]||'Visão geral';
     try{await (pages[page]||dashboard)(container)}
