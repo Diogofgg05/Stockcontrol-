@@ -244,7 +244,7 @@ def create_app(database_url=None, setup_key=None):
             cursor = connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
-    from .operations import install_operations
+    from .operations import install_operations, StockBalance, PurchaseOrder, Reservation
     Base.metadata.create_all(bind=engine)  # Dev bootstrap only: migrations required in production.
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     app = FastAPI(title="StockControl · Operações Industriais Fase 2", version="0.2.0")
@@ -509,6 +509,18 @@ def create_app(database_url=None, setup_key=None):
                 Warehouse.company_id == company.id, Warehouse.active.is_(True))) or 0
             if n <= 1:
                 raise HTTPException(409, "É obrigatório manter um armazém ativo.")
+            occupied = db.scalar(select(StockBalance.id).where(
+                StockBalance.company_id == company.id,
+                StockBalance.warehouse_id == warehouse.id,
+                (StockBalance.on_hand_milli > 0) | (StockBalance.reserved_milli > 0)))
+            if occupied:
+                raise HTTPException(409, "Não é possível desativar um armazém com stock ou reservas.")
+            open_purchase = db.scalar(select(PurchaseOrder.id).where(
+                PurchaseOrder.company_id == company.id,
+                PurchaseOrder.warehouse_id == warehouse.id,
+                PurchaseOrder.state.in_(("Aberta", "Parcial"))))
+            if open_purchase:
+                raise HTTPException(409, "O armazém tem encomendas pendentes de receção.")
         try:
             if payload.name is not None:
                 warehouse.name = clean_name(payload.name, "Armazém", 80)
