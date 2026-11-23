@@ -1,7 +1,7 @@
 name: StockControl Phase 2 UX and Private Photos
 on:
   push:
-    branches: ['feat/stockcontrol-phase2-ux-media']
+    branches: [main, 'feat/stockcontrol-phase2-ux-media']
   pull_request:
     paths:
       - 'backend/phase1/**'
