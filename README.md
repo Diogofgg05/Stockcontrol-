@@ -1,3 +1,11 @@
+## StockControl V8 — Premium Light (nova pré-visualização)
+
+A versão [Premium Light](portal_php/public/assets/design-v8/) apresenta o mesmo workspace industrial offline com uma interface clara, azul e branca, mais legível e responsiva, sem substituir a V6 escura. Abre `portal_php/public/assets/design-v8/index.html`.
+
+[Consultar limitações e testes da V8](portal_php/public/assets/design-v8/README.md). A interface continua com dados fictícios locais e não é um SaaS de produção.
+
+---
+
 # StockControl V6 — Reference Dark Design System
 
 A V6 aplica a imagem de referência do utilizador a **todas as páginas e componentes**: app escura com rail vertical de ícones, fundo exterior pervinca, linhas de 1px, gráficos lilás/lima, coluna de atividade lateral e controles compactos. O design mantém o núcleo offline da V5.
