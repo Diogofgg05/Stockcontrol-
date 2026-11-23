@@ -1,3 +1,11 @@
+## StockControl · Inventário visual (Fase 2.1)
+
+O painel autenticado em `/admin` inclui agora **pesquisa e filtros de materiais, paginação, modais consistentes e fotografias privadas por empresa**, com ilustrações industriais como fallback. As fotografias são submetidas por Administrador/Gestor, validadas e convertidas para WebP, sendo consultadas exclusivamente através da API autorizada.
+
+[Funcionalidades, instalação, testes e limites de produção](backend/phase1/UX_MEDIA.md).
+
+---
+
 ## StockControl Fase 2 — gestão operacional ligada ao servidor
 
 A Fase 2 acrescenta **inventário persistente e operações industriais reais** à área autenticada em [`backend/phase1/`](backend/phase1/). Os novos módulos incluem materiais, saldos por armazém, movimentos e transferências, reservas de produção, fornecedores, encomendas, contagens físicas, códigos QR e auditoria. O painel web em `/admin` tem navegação para estas secções.
