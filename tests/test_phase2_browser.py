@@ -169,7 +169,7 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.screenshot(path=str(CAPTURES/"users-updated-desktop.png"))
 
             page.locator('[data-page="warehouses"]').click()
-            page.get_by_role("heading",name="Armazéns").wait_for()
+            page.get_by_role("heading",name="Armazéns",exact=True).wait_for()
             page.get_by_role("button",name="Novo armazém").click()
             warehouse_form=page.locator('dialog.sr-dialog .sr-dialog-form')
             warehouse_form.locator('[name="code"]').fill("ARM-02")
