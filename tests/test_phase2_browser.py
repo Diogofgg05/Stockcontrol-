@@ -98,7 +98,7 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.get_by_text("FAP-001").first.wait_for()
             page.screenshot(path=str(CAPTURES/"suppliers-desktop.png"))
             page.locator('[data-page="purchases"]').click()
-            page.get_by_role("heading",name="Encomendas").wait_for()
+            page.get_by_role("heading",name="Encomendas",exact=True).wait_for()
             form=page.locator('.edit-form').first
             form.locator('[name="code"]').fill("PO-100")
             form.locator('[name="quantity"]').fill("12")
