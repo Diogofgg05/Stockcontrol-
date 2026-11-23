@@ -6,12 +6,14 @@ on:
       - 'backend/phase1/**'
       - 'tests/test_phase2_rest.py'
       - 'tests/test_phase2_browser.py'
+      - 'tests/test_phase1_browser.py'
       - '.github/workflows/stockcontrol-phase2-rest.yml'
   pull_request:
     paths:
       - 'backend/phase1/**'
       - 'tests/test_phase2_rest.py'
       - 'tests/test_phase2_browser.py'
+      - 'tests/test_phase1_browser.py'
       - '.github/workflows/stockcontrol-phase2-rest.yml'
   workflow_dispatch:
 
@@ -58,7 +60,7 @@ jobs:
           python -m pip install pytest httpx playwright
           python -m playwright install --with-deps chromium
       - name: Run full authenticated desktop/mobile flows
-        run: python -m pytest -q tests/test_phase2_browser.py
+        run: python -m pytest -q tests/test_phase1_browser.py tests/test_phase2_browser.py
       - name: Publish actual screenshots from browser
         if: always()
         uses: actions/upload-artifact@v4
