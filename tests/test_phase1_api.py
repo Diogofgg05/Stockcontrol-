@@ -174,6 +174,13 @@ def test_hardening_headers_and_payload_validation(scenario):
         "name":"abc", "email":"x@example.com", "role":"root",
         "password":"longEnough123"}).status_code==422
     assert c.get("/api/v1/audit?limit=200",headers=a).status_code==422
+    assert c.post("/api/v1/users",headers=a,json={
+        "name":"   ","email":"spaces@example.com","password":OTHER,
+        "role":"Operador"}).status_code==422
+    assert c.patch("/api/v1/company",headers=a,json={
+        "name":"   ","sector":"Indústria"}).status_code==422
+    assert c.post("/api/v1/warehouses",headers=a,json={
+        "name":"   ","code":"ARM-09","location":"Aveiro"}).status_code==422
 
 
 def test_rate_limit_failed_logins(scenario):
