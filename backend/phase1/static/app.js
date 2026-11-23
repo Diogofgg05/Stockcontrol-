@@ -33,13 +33,13 @@
     if(Array.isArray(d))return d.map(x=>x.msg||'Campo inválido').join('; ').slice(0,240);
     return 'Pedido falhou ('+status+').';
   }
-  async function call(path,method='GET',body=null){
+  async function call(path,method='GET',body=null,apiVersion='v1'){
     const headers={'Accept':'application/json'};
     if(token)headers.Authorization='Bearer '+token;
     if(body!==null)headers['Content-Type']='application/json';
     let response;
     try{
-      response=await fetch('/api/v1'+path,{method,headers,body:body===null?undefined:JSON.stringify(body),credentials:'omit',cache:'no-store'});
+      response=await fetch('/api/'+apiVersion+path,{method,headers,body:body===null?undefined:JSON.stringify(body),credentials:'omit',cache:'no-store'});
     }catch{throw Error('Sem ligação ao servidor. Verifica a rede.')}
     let data;
     try{data=await response.json()}catch{data={}}
@@ -139,7 +139,7 @@
   async function dashboard(root){
     const [wh,events,users,inventory]=await Promise.all([
       call('/warehouses'),auditAccess()?call('/audit?limit=5'):Promise.resolve([]),
-      usersAccess()?call('/users'):Promise.resolve([]),call('/stock/summary')
+      usersAccess()?call('/users'):Promise.resolve([]),call('/stock/summary','GET',null,'v2')
     ]);
     const metrics=el('div','grid-metrics');
     metrics.append(metric('Armazéns',wh.length,'Localizações registadas'),
@@ -281,7 +281,8 @@
       field('Nome da empresa','name','text',c.name),field('Setor','sector','text',c.sector)
     ],'Guardar empresa',async data=>{currentCompany=await call('/company','PATCH',data);by('company-name').textContent=currentCompany.name}));
   }
-  const operationalPages=window.StockOperationsUI({call,el,heading,panel,table,td,button,field,select,formPanel,
+  const operationalPages=window.StockOperationsUI({call:(path,method,body)=>call(path,method,body,'v2'),
+    el,heading,panel,table,td,button,field,select,formPanel,
     notify,render,canManage:()=>['Administrador','Gestor'].includes(currentUser?.role),
     canWrite:()=>['Administrador','Gestor','Operador'].includes(currentUser?.role),getToken:()=>token});
   const pages={dashboard,users,warehouses,audit,company,...operationalPages};
