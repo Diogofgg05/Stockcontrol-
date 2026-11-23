@@ -128,10 +128,29 @@
       cell.classList.add('v9-alert-name');
     });
   }
+  function asideProducts(){
+    const aside=document.querySelector('#app .right-insights');
+    if(!aside||aside.querySelector('.v9-aside-products'))return;
+    const section=tag('section','v9-aside-products');
+    section.append(tag('span','v9-aside-label','MATERIAIS EM DESTAQUE'));
+    for(const c of [categories[0],categories[1],categories[2]]){
+      const item=tag('button','v9-aside-product');
+      item.type='button';item.dataset.nav='inventory';
+      item.setAttribute('aria-label','Ver inventário: '+c.label);
+      const image=tag('span','v9-aside-image');image.append(makeImage(c.asset,''));
+      const copy=tag('span','v9-aside-copy');
+      copy.append(tag('strong','',c.label));
+      copy.append(tag('small','',c.subtitle));
+      item.append(image,copy);section.append(item);
+    }
+    const last=aside.querySelector('.insight-bottom');
+    if(last)last.before(section);else aside.append(section);
+  }
   function decorate(){
     const route=document.querySelector('#app .route-view');
     if(!route)return;
     decorateRows(route);
+    asideProducts();
     const page=route.getAttribute('data-route');
     if(page==='dashboard'){dashboardBanner(route);visualNumbers(route)}
     if(page==='inventory')inventoryCategories(route);
