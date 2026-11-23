@@ -53,6 +53,7 @@ def test_create_materials_scoped_to_tenant_and_role(e):
     c,app,a,b,wa,wb,m,part,sup,post,auth=e
     assert c.get("/api/v2/materials",headers=a).status_code==200
     assert len(c.get("/api/v2/materials",headers=b).json())==0
+    assert c.get("/api/v2/stock/summary",headers=a).json()["low_stock_materials"]==2
     assert c.post("/api/v2/materials",headers=a,json={
         "sku":"CAB-01","name":"Duplicado","category":"Elétrico","unit":"m"}).status_code==409
     assert c.get("/api/v2/materials?warehouse_id="+wb,headers=a).status_code==404
