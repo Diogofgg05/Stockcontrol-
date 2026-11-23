@@ -1,0 +1,64 @@
+
+/* StockControl Phase 2.1 · unified operational UX */
+:root{--stock-ui-primary:#315de5;--stock-ui-border:#e4eaf3;--stock-ui-ink:#253952}
+.stock-ux-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0;flex:1}
+.stock-ux-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-top:1px solid #e9edf4;padding:13px 17px}
+.stock-ux-filters input,.stock-ux-select{height:37px;min-width:115px;border-radius:8px;border:1px solid #dfe6f1;background:#f9fbff;font-size:11px;color:#38516e;padding:0 10px}
+.stock-ux-filters input{flex:1 1 190px;max-width:330px}
+.stock-ux-select{flex:0 1 174px;max-width:210px}
+.stock-ux-filters input:focus,.stock-ux-select:focus{outline:none;border-color:#6f92ec;box-shadow:0 0 0 3px #edf2ff}
+.stock-ux-count{color:#8795a9;font-size:10px;white-space:nowrap}
+.stock-ux-material{display:flex;align-items:center;gap:10px;min-width:220px}
+.stock-ux-material>div{min-width:0}
+.stock-ux-material strong{display:block;line-height:1.35;color:#2a3e57;font-size:11px}
+.stock-ux-thumb{height:45px;width:49px;min-width:49px;overflow:hidden;border-radius:9px;border:1px solid #e0e8f3;background:#eaf0fa;display:grid;place-items:center}
+.stock-ux-thumb img{height:100%;width:100%;object-fit:cover;display:block}
+.stock-ux-state{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid #cceadb;border-radius:7px;color:#16886d;background:#eaf8f1;padding:6px 9px;font-size:10px;font-weight:750}
+.stock-ux-state:before{content:"";height:6px;width:6px;border-radius:50%;background:currentColor}
+.stock-ux-state.low{color:#af791f;background:#fff4e7;border-color:#f4e4c5}
+.stock-ux-state.zero{color:#c35162;background:#fff0f2;border-color:#f3d6da}
+.stock-ux-pagination{display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:12px 18px;border-top:1px solid #e8edf5;background:#fff}
+.stock-ux-pagination small{font-size:11px;color:#71839b}
+.stock-ux-pagination button{min-height:31px;padding:6px 11px}
+.stock-ux-mini-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fcfdff;border-top:1px solid #edf1f6;gap:10px}
+.stock-ux-mini-toolbar input{min-height:34px;border:1px solid #dfe6f1;border-radius:8px;padding:7px 11px;background:#fff;color:#2b425f;font-size:11px;max-width:285px;width:100%}
+.stock-ux-mini-toolbar small{color:#90a0b4;font-size:10px;white-space:nowrap}
+.stock-ux-dialog{border:1px solid #dae3f1;box-shadow:0 35px 90px #1c365549;border-radius:16px;max-height:min(90dvh,850px);width:min(560px,calc(100vw - 24px));overflow:auto;padding:0;background:#fff;color:#21334f}
+.stock-ux-dialog::backdrop{background:#10213a88}
+.stock-ux-modal-header{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:20px 20px 12px}
+.stock-ux-modal-header h2{font-size:19px;margin:0;color:#243c5a}
+.stock-ux-dialog>.panel{border:0;box-shadow:none;margin:0;border-radius:0}
+.stock-ux-dialog>.panel .panel-title{padding:7px 20px 12px}
+.stock-ux-dialog>.panel .panel-title h2{font-size:15px}
+.stock-ux-dialog>.panel .panel-title p{font-size:11px}
+.stock-ux-dialog>.panel .edit-form{padding:0 20px 22px}
+.stock-ux-dialog .form-grid{display:grid;gap:12px}
+.stock-ux-dialog .edit-form input,.stock-ux-dialog .edit-form select{min-height:43px}
+.stock-ux-photo-form .edit-form{padding:8px 20px 20px}
+.stock-ux-photo-preview{height:195px;background:#f3f7fd;border:1px dashed #c7d8ed;border-radius:10px;display:grid;place-items:center;overflow:hidden}
+.stock-ux-photo-preview>img{width:100%;height:100%;object-fit:contain}
+.stock-ux-photo-preview .stock-ux-thumb{width:220px;height:174px;border:0}
+.stock-ux-photo-form .actions{display:flex;gap:8px;flex-wrap:wrap}
+.stock-ux-photo-form input[type=file]{padding:10px;height:auto}
+.stock-photo-action{white-space:nowrap}
+.stock-ux-add{min-height:37px}
+[hidden]{display:none!important}
+@media(max-width:1160px){
+ .stock-ux-filter-bar{align-items:flex-start;flex-direction:column}
+ .stock-ux-filters{width:100%}.stock-ux-count{align-self:flex-start}
+}
+@media(max-width:690px){
+ .stock-ux-filter-bar{padding:12px;gap:9px}
+ .stock-ux-filters{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+ .stock-ux-filters input{grid-column:1/-1;max-width:none;width:100%}
+ .stock-ux-select{width:100%;max-width:none;min-width:0;flex:auto}
+ .stock-ux-material{min-width:195px}
+ .stock-ux-thumb{height:40px;width:43px;min-width:43px}
+ .stock-ux-pagination{justify-content:space-between}
+ .stock-ux-mini-toolbar{padding:9px 12px}
+ .stock-ux-dialog{border-radius:13px}
+ .stock-ux-modal-header{padding:17px 15px 10px}
+ .stock-ux-dialog>.panel .edit-form,.stock-ux-photo-form .edit-form{padding:0 15px 19px}
+ .stock-ux-dialog>.panel .panel-title{padding:5px 15px 12px}
+}
+@media(prefers-reduced-motion:reduce){.stock-ux-dialog{scroll-behavior:auto}}
