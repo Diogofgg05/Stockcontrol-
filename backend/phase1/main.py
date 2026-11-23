@@ -537,13 +537,22 @@ def create_app(database_url=None, setup_key=None):
 
     @app.get("/api/v1/audit")
     def list_audit(limit: int = 50, offset: int = 0,
+                   action: str | None = None, target_type: str | None = None,
                    ctx=Depends(require("Administrador", "Gestor", "Auditor")),
                    db: Session = Depends(db_session)):
         if not 1 <= limit <= 100 or offset < 0 or offset > 100000:
             raise HTTPException(422, "Paginação inválida.")
-        events = db.scalars(select(AuditEvent).where(
-            AuditEvent.company_id == ctx[1].id
-        ).order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc()).offset(offset).limit(limit)).all()
+        query = select(AuditEvent).where(AuditEvent.company_id == ctx[1].id)
+        if action:
+            if len(action) > 80 or not re.fullmatch(r"[a-zA-Z0-9_.-]+", action):
+                raise HTTPException(422, "Filtro de ação inválido.")
+            query = query.where(AuditEvent.action == action)
+        if target_type:
+            if len(target_type) > 40 or not re.fullmatch(r"[a-zA-Z0-9_.-]+", target_type):
+                raise HTTPException(422, "Filtro de entidade inválido.")
+            query = query.where(AuditEvent.target_type == target_type)
+        events = db.scalars(query.order_by(
+            AuditEvent.created_at.desc(), AuditEvent.id.desc()).offset(offset).limit(limit)).all()
         return [{"id": e.id, "action": e.action, "target_type": e.target_type,
                  "target_id": e.target_id, "detail": e.detail, "actor_id": e.actor_id,
                  "created_at": e.created_at.isoformat()} for e in events]
