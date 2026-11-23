@@ -7,6 +7,7 @@ PostgreSQL transactions use a company-row FOR UPDATE lock.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 import re
@@ -17,7 +18,7 @@ from uuid import uuid4
 
 from fastapi import Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, Text, UniqueConstraint, select
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 import qrcode
 import qrcode.image.svg
@@ -82,7 +83,7 @@ class StockOperation(Base):
     request_id:Mapped[str]=mapped_column(String(80),nullable=False)
     kind:Mapped[str]=mapped_column(String(30),nullable=False)
     note:Mapped[str]=mapped_column(String(250),nullable=False,default="")
-    created_at= mapped_column(default=utcnow,nullable=False)
+    created_at:Mapped[datetime]= mapped_column(DateTime(timezone=True),default=utcnow,nullable=False)
 
 
 class StockMovement(Base):
