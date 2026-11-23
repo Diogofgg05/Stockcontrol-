@@ -15,9 +15,7 @@
     reservations:[{id:'RS-001',sku:'MAT-001',qty:30,consumed:0,order:'OP-104',status:'Ativa',createdAt:'2026-11-19T10:10:00.000Z'},{id:'RS-002',sku:'MAT-007',qty:15,consumed:0,order:'OP-105',status:'Ativa',createdAt:'2026-11-19T11:10:00.000Z'}],
     movements:[{id:'MV-001',sku:'MAT-001',type:'Entrada',qty:120,createdAt:'2026-11-19T09:42:00.000Z',actor:'Equipa demo'},{id:'MV-002',sku:'MAT-002',type:'Saída',qty:36,createdAt:'2026-11-19T09:18:00.000Z',actor:'Equipa demo'}],
     counts:[],events:[{id:'EV-001',action:'Ambiente de demonstração iniciado',actor:'Sistema',createdAt:'2026-11-19T09:00:00.000Z'}],
-    documents:[],users:[{id:'USR-001',name:'Ana Silva',role:'Administrador',state:'Ativo'},{id:'USR-002',name:'Bruno Costa',role:'Operador',state:'Ativo'},{id:'USR-003',name:'Carla Reis',role:'Auditor',state:'Ativo'}],
-    company:{id:'demo',name:'Fábrica Demo',sector:'Indústria e produção'},
-    warehouses:[{id:'WH-001',name:'Armazém principal',code:'ARM-01',location:'Aveiro',state:'Ativo'}]
+    documents:[],users:[{name:'Ana Silva',role:'Administrador',state:'Ativo'},{name:'Bruno Costa',role:'Operador',state:'Ativo'},{name:'Carla Reis',role:'Auditor',state:'Ativo'}]
   });
   // Quando existe stock físico mas todas as unidades estão reservadas,
   // o estado não pode indicar disponibilidade para novas saídas.
@@ -117,9 +115,6 @@
     const lists={materials:5000,reservations:20000,movements:20000,counts:20000,events:200,documents:2000};
     if(!Object.entries(lists).every(([k,max])=>Array.isArray(w[k])&&w[k].length<=max))return false;
     if(!w.materials.length)return false;
-    if(w.users!==undefined&&!validUsers(normalizeUsers(w.users)))return false;
-    if(w.warehouses!==undefined&&!validWarehouses(normalizeWarehouses(w.warehouses)))return false;
-    if(w.company!==undefined&&(!w.company||w.company.id!=='demo'||typeof w.company.name!=='string'||!w.company.name.trim()||w.company.name.length>100||typeof w.company.sector!=='string'||!w.company.sector.trim()||w.company.sector.length>100))return false;
     const skuSet=new Set();
     for(const m of w.materials){
       if(!m||typeof m!=='object'||!validString(m.sku,36)||!(/^[A-Z0-9][A-Z0-9._-]{1,35}$/.test(m.sku))||skuSet.has(m.sku)
@@ -155,113 +150,6 @@
     for(const m of w.materials)if(reserved(m.sku,w.reservations)>m.stock)return false;
     return true;
   }
-
-  // Fase 1: domínio local de administração. A autorização no browser é APENAS demonstração.
-  const ADMIN_ROLES=['Administrador','Gestor','Operador','Auditor'];
-  const USER_STATES=['Ativo','Inativo'];
-  const activeAdmins=users=>users.filter(u=>u.role==='Administrador'&&u.state==='Ativo').length;
-  function validUsers(users){
-    if(!Array.isArray(users)||users.length<1||users.length>100)return false;
-    const ids=new Set(),names=new Set();
-    for(const user of users){
-      if(!user||typeof user!=='object'||typeof user.id!=='string'||!/^[A-Z0-9-]{3,36}$/.test(user.id)
-        ||typeof user.name!=='string'||!user.name.trim()||user.name.trim().length>80
-        ||!ADMIN_ROLES.includes(user.role)||!USER_STATES.includes(user.state))return false;
-      const folded=user.name.trim().toLocaleLowerCase('pt-PT');
-      if(ids.has(user.id)||names.has(folded))return false;
-      ids.add(user.id);names.add(folded);
-    }
-    return activeAdmins(users)>=1;
-  }
-  function normalizeUsers(users){
-    const fallback=()=>demo().users.map(u=>({...u}));
-    if(!Array.isArray(users)||!users.length)return fallback();
-    const normalized=users.map((u,i)=>({
-      id:typeof u?.id==='string'&&u.id?u.id:'USR-'+String(i+1).padStart(3,'0'),
-      name:u?.name,role:u?.role,state:u?.state
-    }));
-    return validUsers(normalized)?normalized:fallback();
-  }
-  function createTeamUser(users,name,role){
-    if(!validUsers(users))throw Error('A equipa contém dados inválidos.');
-    const clean=String(name??'').trim().replace(/\s+/g,' ');
-    if(!clean||clean.length>80)throw Error('Indica um nome entre 1 e 80 caracteres.');
-    if(!ADMIN_ROLES.includes(role))throw Error('Papel inválido.');
-    if(users.length>=100)throw Error('Limite de 100 utilizadores de demonstração.');
-    if(users.some(u=>u.name.toLocaleLowerCase('pt-PT')===clean.toLocaleLowerCase('pt-PT')))throw Error('Já existe alguém com este nome.');
-    let n=1,id;
-    do{id='USR-'+String(n++).padStart(3,'0')}while(users.some(u=>u.id===id));
-    return [...users,{id,name:clean,role,state:'Ativo'}];
-  }
-  function updateTeamUser(users,id,role,state){
-    if(!validUsers(users))throw Error('A equipa contém dados inválidos.');
-    if(!users.some(u=>u.id===id))throw Error('Utilizador inexistente.');
-    if(!ADMIN_ROLES.includes(role)||!USER_STATES.includes(state))throw Error('Papel ou estado inválido.');
-    const next=users.map(u=>u.id===id?{...u,role,state}:({...u}));
-    if(!validUsers(next))throw Error('É obrigatório manter pelo menos um administrador ativo.');
-    return next;
-  }
-  function updateMaterialSettings(materials,sku,patch){
-    if(!Array.isArray(materials)||!materials.some(m=>m.sku===sku))throw Error('Material inexistente.');
-    const location=String(patch?.location??'').trim();
-    if(!location||location.length>36)throw Error('Localização inválida (1 a 36 caracteres).');
-    const rawMin=patch?.min;
-    if(rawMin===null||rawMin===undefined||String(rawMin).trim()===''||!preciseQty(rawMin,true))
-      throw Error('Stock mínimo inválido.');
-    const rawCost=patch?.cost;
-    if(rawCost===null||rawCost===undefined||String(rawCost).trim()==='')
-      throw Error('Custo unitário obrigatório.');
-    const cost=Number(rawCost);
-    if(!Number.isFinite(cost)||cost<0||cost>MAX_QTY||Math.abs(Math.round(cost*100)-cost*100)>1e-7)
-      throw Error('Custo inválido (máximo 2 casas decimais).');
-    return materials.map(m=>m.sku===sku?{...m,min:Number(rawMin),cost:Math.round(cost*100)/100,location}:({...m}));
-  }
-  function validWarehouses(warehouses){
-    if(!Array.isArray(warehouses)||warehouses.length<1||warehouses.length>50)return false;
-    const ids=new Set(),codes=new Set();
-    for(const w of warehouses){
-      if(!w||typeof w.id!=='string'||!/^[A-Z0-9-]{3,36}$/.test(w.id)
-        ||typeof w.name!=='string'||!w.name.trim()||w.name.length>80
-        ||typeof w.code!=='string'||!/^[A-Z0-9-]{2,24}$/.test(w.code)
-        ||typeof w.location!=='string'||!w.location.trim()||w.location.length>120
-        ||!USER_STATES.includes(w.state)||ids.has(w.id)||codes.has(w.code))return false;
-      ids.add(w.id);codes.add(w.code);
-    }
-    return warehouses.some(w=>w.state==='Ativo');
-  }
-  function normalizeWarehouses(warehouses){
-    return validWarehouses(warehouses)?warehouses.map(w=>({...w})):demo().warehouses.map(w=>({...w}));
-  }
-  function createWarehouse(warehouses,name,code,location){
-    if(!validWarehouses(warehouses))throw Error('Armazéns inválidos.');
-    const n=String(name??'').trim(),c=String(code??'').trim().toUpperCase(),loc=String(location??'').trim();
-    if(!n||n.length>80||!loc||loc.length>120||!/^[A-Z0-9-]{2,24}$/.test(c))throw Error('Nome, código ou localização inválidos.');
-    if(warehouses.length>=50)throw Error('Limite de armazéns de demonstração.');
-    if(warehouses.some(w=>w.code===c))throw Error('Código de armazém duplicado.');
-    let i=1,id;
-    do{id='WH-'+String(i++).padStart(3,'0')}while(warehouses.some(w=>w.id===id));
-    return [...warehouses,{id,name:n,code:c,location:loc,state:'Ativo'}];
-  }
-  function updateWarehouse(warehouses,id,patch){
-    if(!validWarehouses(warehouses))throw Error('Armazéns inválidos.');
-    if(!warehouses.some(w=>w.id===id))throw Error('Armazém inexistente.');
-    const next=warehouses.map(w=>w.id===id?{...w,state:patch.state}:({...w}));
-    if(!validWarehouses(next))throw Error('É obrigatório manter pelo menos um armazém ativo.');
-    return next;
-  }
-  function updateCompany(company,patch){
-    if(!company||company.id!=='demo')throw Error('Empresa inválida.');
-    const name=String(patch?.name??'').trim(),sector=String(patch?.sector??'').trim();
-    if(!name||name.length>100||!sector||sector.length>100)throw Error('Nome ou setor inválidos.');
-    return {id:'demo',name,sector};
-  }
-  function reorderSuggestions(materials,reservations){
-    return materials.map(m=>{
-      const free=available(m,reservations),threshold=m.min;
-      const needed=threshold>0&&free<=threshold?roundQty(Math.max(0,Math.min(MAX_QTY,threshold*2)-free)):0;
-      return {...m,free,needed};
-    }).filter(m=>m.needed>0).sort((a,b)=>(a.free/a.min)-(b.free/b.min)||a.sku.localeCompare(b.sku));
-  }
   function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function csvCell(v){
     let s=String(v??'');
@@ -272,7 +160,7 @@
   }
   function toCsv(rows,headers){return '\ufeff'+[headers,...rows].map(row=>row.map(csvCell).join(';')).join('\r\n')+'\r\n'}
   function normalizedSku(v){return String(v||'').trim().toUpperCase()}
-  const api={demo,status,inventoryView,reserved,reservationRemaining,planConsumption,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,validUsers,normalizeUsers,createTeamUser,updateTeamUser,updateMaterialSettings,validWarehouses,normalizeWarehouses,createWarehouse,updateWarehouse,updateCompany,reorderSuggestions,escapeHTML,csvCell,toCsv,normalizedSku};
+  const api={demo,status,inventoryView,reserved,reservationRemaining,planConsumption,available,positiveQty,assertMovement,newStock,assertReservation,assertCount,summary,validateWorkspace,escapeHTML,csvCell,toCsv,normalizedSku};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(typeof window!=='undefined')window.StockModel=api;
 })();
