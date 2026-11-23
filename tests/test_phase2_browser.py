@@ -74,7 +74,8 @@ def test_phase2_browser_and_screenshots(tmp_path):
                 +" | JS errors: "+str(errors)
             )
             page.screenshot(path=str(CAPTURES/"inventory-empty-desktop.png"))
-            form=page.locator('.edit-form').last
+            page.get_by_role("button",name="Adicionar material").click()
+            form=page.locator('dialog.stock-ux-dialog .edit-form')
             form.locator('[name="sku"]').fill("CAB-001")
             form.locator('[name="name"]').fill("Cabo industrial 4 pinos")
             form.locator('[name="category"]').fill("Elétrico")
@@ -85,13 +86,15 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.screenshot(path=str(CAPTURES/"inventory-desktop.png"))
             page.locator('[data-page="stockMovements"]').click()
             page.get_by_role("heading",name="Movimentos de stock").wait_for()
-            form=page.locator('.edit-form').first
+            page.get_by_role("button",name="Registar movimento").click()
+            form=page.locator('dialog.stock-ux-dialog .edit-form')
             form.locator('[name="quantity"]').fill("20")
             form.locator('button[type="submit"]').click()
             page.locator('.table-scroll tbody tr').first.wait_for()
             page.screenshot(path=str(CAPTURES/"movements-desktop.png"))
             page.locator('[data-page="suppliers"]').click()
-            form=page.locator('.edit-form').first
+            page.get_by_role("button",name="Adicionar fornecedor").click()
+            form=page.locator('dialog.stock-ux-dialog .edit-form')
             form.locator('[name="code"]').fill("FAP-001")
             form.locator('[name="name"]').fill("Fornecedor industrial")
             form.locator('button[type="submit"]').click()
@@ -99,7 +102,8 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.screenshot(path=str(CAPTURES/"suppliers-desktop.png"))
             page.locator('[data-page="purchases"]').click()
             page.get_by_role("heading",name="Encomendas",exact=True).wait_for()
-            form=page.locator('.edit-form').first
+            page.get_by_role("button",name="Criar encomenda").click()
+            form=page.locator('dialog.stock-ux-dialog .edit-form')
             form.locator('[name="code"]').fill("PO-100")
             form.locator('[name="quantity"]').fill("12")
             form.locator('button[type="submit"]').click()
@@ -107,7 +111,8 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.screenshot(path=str(CAPTURES/"purchases-desktop.png"))
             page.locator('[data-page="reservations"]').click()
             page.get_by_role("heading",name="Reservas de produção").wait_for()
-            form=page.locator('.edit-form').first
+            page.get_by_role("button",name="Criar reserva").click()
+            form=page.locator('dialog.stock-ux-dialog .edit-form')
             form.locator('[name="order_ref"]').fill("OP-101")
             form.locator('[name="quantity"]').fill("4")
             form.locator('button[type="submit"]').click()
@@ -115,7 +120,8 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.screenshot(path=str(CAPTURES/"reservations-desktop.png"))
             page.locator('[data-page="counts"]').click()
             page.get_by_role("heading",name="Inventário físico").wait_for()
-            form=page.locator('.edit-form').first
+            page.get_by_role("button",name="Guardar contagem").click()
+            form=page.locator('dialog.stock-ux-dialog .edit-form')
             form.locator('[name="counted"]').fill("20")
             form.locator('button[type="submit"]').click()
             page.get_by_text("Pendente").first.wait_for()
