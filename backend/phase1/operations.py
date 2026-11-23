@@ -422,9 +422,13 @@ def install_operations(app,db_session,get_context,require,audit_func):
         balances=db.scalars(select(StockBalance).where(StockBalance.company_id==company_id)).all()
         materials=db.scalars(select(Material).where(Material.company_id==company_id)).all()
         unit_lookup={m.id:m for m in materials}
-        low=sum(1 for b in balances if unit_lookup.get(b.material_id) and b.on_hand_milli-b.reserved_milli<=unit_lookup[b.material_id].minimum_milli)
+        available_by_material={}
+        for b in balances:
+            available_by_material[b.material_id]=available_by_material.get(b.material_id,0)+b.on_hand_milli-b.reserved_milli
+        low=sum(1 for m in materials if m.active and m.minimum_milli>0
+                and available_by_material.get(m.id,0)<=m.minimum_milli)
         return {"materials":len(materials),"locations_with_stock":len(balances),
-                "low_stock_locations":low,
+                "low_stock_materials":low,
                 "active_reservations":len(db.scalars(select(Reservation).where(
                     Reservation.company_id==company_id,Reservation.state=="Ativa")).all())}
 
