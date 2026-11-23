@@ -9,3 +9,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Private material photo assets and local previews
+stockcontrol-media/
+tests/phase2-previews/
