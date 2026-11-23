@@ -193,256 +193,93 @@
     });
     policies.append(checks);lower.append(policies);root.append(lower);
   }
-  // Reusable administration dialog: same visual language as the operational modals.
-  function adminDialog(title,description,fields,submitLabel,handler){
-    const dialog=el('dialog','stock-admin-dialog');
-    dialog.setAttribute('aria-label',title);
-    const content=formPanel(title,description,fields,submitLabel,async values=>{
-      await handler(values);dialog.close();
-    });
-    const top=content.querySelector('.panel-title');
-    top?.append(button('Fechar',()=>dialog.close(),'secondary'));
-    dialog.append(content);
-    dialog.addEventListener('close',()=>dialog.remove(),{once:true});
-    document.body.append(dialog);dialog.showModal();
-    dialog.querySelector('input, select, button')?.focus();
-    return dialog;
-  }
-  function controlGroup(label,name,values,current){
-    const wrapper=el('label'),input=select(values,current);
-    input.name=name;input.className='admin-filter-select';
-    wrapper.append(el('span','',label),input);
-    return wrapper;
-  }
-  function adminFiltering(panel,columns,records,renderer,options={}){
-    const area=el('div','admin-table-toolbar');
-    const query=document.createElement('input');
-    query.type='search';query.placeholder=options.placeholder||'Pesquisar nome, código ou referência…';
-    query.setAttribute('aria-label','Pesquisar registos');
-    area.append(query);
-    const filters=[];
-    for(const f of options.filters||[]){
-      const selectNode=document.createElement('select');
-      selectNode.setAttribute('aria-label',f.label);
-      for(const [id,title] of f.options){
-        const opt=el('option','',title);opt.value=id;selectNode.append(opt);
-      }
-      selectNode.addEventListener('change',refresh);
-      area.append(selectNode);filters.push({select:selectNode,field:f.field});
-    }
-    const label=el('span','admin-table-count');
-    label.setAttribute('aria-live','polite');
-    panel.append(area,label);
-    const holder=el('div','admin-table-results');
-    panel.append(holder);
-    function refresh(){
-      const q=query.value.trim().toLocaleLowerCase('pt-PT');
-      const shown=records.filter(r=>{
-        if(q&&!Object.values(r).join(' ').toLocaleLowerCase('pt-PT').includes(q))return false;
-        return filters.every(f=>!f.select.value||String(r[f.field])===f.select.value);
-      });
-      label.textContent='A mostrar '+shown.length+' de '+records.length+' registos';
-      holder.replaceChildren(shown.length?table(columns,shown,renderer):
-        el('div','empty',records.length?'Nenhum resultado para os filtros.':'Ainda não existem registos.'));
-    }
-    query.addEventListener('input',refresh);refresh();
-  }
   async function users(root){
     if(!usersAccess()){root.append(el('p','','Sem permissão para consultar utilizadores.'));return}
     const records=await call('/users');
-    const active=records.filter(r=>r.active).length;
-    const create=can('Administrador')?button('+ Novo utilizador',()=>{
-      const roleField=controlGroup('Perfil','role',['Operador','Gestor','Auditor','Administrador'],'Operador');
-      adminDialog('Novo utilizador','O colaborador recebe um perfil e uma palavra-passe inicial.',[
-        field('Nome completo','name'),field('Email','email','email'),roleField,
-        field('Palavra-passe inicial (12+ caracteres)','password','password')
-      ],'Criar utilizador',async data=>{await call('/users','POST',data)});
-    },'primary'):null;
-    root.append(heading('PESSOAS E PERMISSÕES','Utilizadores',
-      'Acessos por função, suspensão de contas e administração da equipa.',create));
-    const stats=el('div','stock-summary-inline');
-    stats.append(metric('Utilizadores',records.length,'Da empresa'),
-      metric('Ativos',active,'Acessos permitidos'),
-      metric('Administradores',records.filter(r=>r.role==='Administrador'&&r.active).length,'Gestores de acesso'));
-    root.append(stats);
-    const p=panel('Equipa ('+records.length+')','O sistema exige pelo menos um administrador ativo.');
-    const renderer=user=>{
-      const tr=el('tr'),name=el('div','stock-entity-identity');
-      name.append(el('strong','',user.name),el('small','subtext',user.email));
-      tr.append(td(name),td(el('span','pill',user.role)),
-        td(state(user.active)));
+    root.append(heading('PESSOAS E PERMISSÕES','Utilizadores','Contas e permissões reais, aplicadas na API.'));
+    const p=panel('Equipa ('+records.length+')','Um administrador deve permanecer ativo.');
+    p.append(table(['Pessoa','Email','Perfil','Estado','Ações'],records,user=>{
+      const tr=el('tr');tr.append(td(el('strong','',user.name)),td(user.email));
+      const role=select(['Administrador','Gestor','Operador','Auditor'],user.role);
+      const active=select(['Ativo','Inativo'],user.active?'Ativo':'Inativo');active.className='status-picker';
+      role.disabled=!can('Administrador');active.disabled=!can('Administrador');
+      tr.append(td(role),td(active));
       const actions=el('div','actions-inline');
+      const save=button('Guardar',async()=>{
+        save.disabled=true;
+        try{await call('/users/'+encodeURIComponent(user.id),'PATCH',{role:role.value,active:active.value==='Ativo'});notify('Utilizador atualizado.');await render()}
+        catch(err){notify(err.message,true);save.disabled=false}
+      },'secondary');
+      save.disabled=!can('Administrador');
+      actions.append(save);
       if(can('Administrador')){
-        actions.append(button('Editar',()=>{
-          const role=controlGroup('Perfil','role',
-            ['Administrador','Gestor','Operador','Auditor'],user.role);
-          const account=controlGroup('Estado','state',['Ativo','Inativo'],user.active?'Ativo':'Inativo');
-          adminDialog('Editar colaborador · '+user.name,'Altera o acesso sem apagar o histórico de operações.',[
-            field('Nome completo','name','text',user.name),role,account
-          ],'Guardar alterações',async data=>{
-            await call('/users/'+encodeURIComponent(user.id),'PATCH',{
-              name:data.name,role:data.role,active:data.state==='Ativo'});
-          });
-        },'secondary'));
         actions.append(button('Redefinir senha',()=>{
-          adminDialog('Redefinir senha · '+user.name,
-            'Ao guardar, todas as sessões anteriores deste colaborador são revogadas.',[
-              field('Nova palavra-passe (mínimo 12 caracteres)','password','password')
-            ],'Redefinir palavra-passe',async data=>{
-              await call('/users/'+encodeURIComponent(user.id)+'/reset-password','POST',data);
+          document.getElementById('password-reset')?.remove();
+          const reset=formPanel('Palavra-passe · '+user.name,
+            'A redefinição invalida as sessões existentes deste utilizador.',
+            [field('Nova palavra-passe (12+ caracteres)','password','password')],
+            'Redefinir palavra-passe',async values=>{
+              await call('/users/'+encodeURIComponent(user.id)+'/reset-password','POST',values);
             });
+          reset.id='password-reset';
+          by('content').append(reset);
+          reset.scrollIntoView({behavior:'smooth',block:'center'});
         },'subtle'));
-      }else actions.append(el('span','hint','Apenas consulta'));
-      tr.append(td(actions));return tr;
-    };
-    adminFiltering(p,['Colaborador','Perfil','Estado','Ações'],records,renderer,{
-      placeholder:'Pesquisar colaborador, email ou perfil…',
-      filters:[{label:'Filtrar por perfil',field:'role',options:[
-        ['','Todos os perfis'],...['Administrador','Gestor','Operador','Auditor'].map(x=>[x,x])]}]
-    });
-    root.append(p);
+      }
+      tr.append(td(actions));
+      return tr;
+    }));root.append(p);
+    if(can('Administrador')){
+      const roleSelect=select(['Operador','Gestor','Auditor','Administrador'],'Operador');roleSelect.name='role';roleSelect.className='role-picker';
+      const wrap=el('label');wrap.append(el('span','','Perfil do utilizador'),roleSelect);
+      root.append(formPanel('Criar utilizador','A conta só funciona após criar a palavra-passe inicial.',[
+        field('Nome','name'),field('Email','email','email'),wrap,field('Palavra-passe inicial (12+ caracteres)','password','password')
+      ],'Adicionar utilizador',async data=>{await call('/users','POST',data)}));
+    }
   }
   async function warehouses(root){
     const records=await call('/warehouses');
-    const create=warehouseEdit()?button('+ Novo armazém',()=>{
-      adminDialog('Novo armazém','Cria uma localização para a empresa sem alterar quantidades existentes.',[
-        field('Código','code'),field('Nome','name'),field('Localização','location')
-      ],'Criar armazém',async values=>{await call('/warehouses','POST',values)});
-    },'primary'):null;
-    root.append(heading('ESTRUTURA E LOCALIZAÇÕES','Armazéns',
-      'Localizações, estado operacional e controlo de armazéns.',create));
-    const stats=el('div','stock-summary-inline');
-    stats.append(metric('Armazéns',records.length,'Registados'),
-      metric('Ativos',records.filter(r=>r.active).length,'A receber material'),
-      metric('Inativos',records.filter(r=>!r.active).length,'Bloqueados para movimentos'));
-    root.append(stats);
-    const p=panel('Armazéns ('+records.length+')',
-      'Não é possível desativar um armazém com stock, reservas ou encomendas pendentes.');
-    adminFiltering(p,['Código','Armazém','Localização','Estado','Ações'],records,w=>{
-      const tr=el('tr');
-      tr.append(td(el('strong','',w.code)),td(w.name),td(w.location),td(state(w.active)));
+    root.append(heading('ESTRUTURA E LOCALIZAÇÕES','Armazéns','Localizações associadas exclusivamente à tua empresa.'));
+    const p=panel('Armazéns ('+records.length+')','Mantém pelo menos um armazém ativo.');
+    p.append(table(['Código','Armazém','Localização','Estado',''],records,w=>{
+      const tr=el('tr');tr.append(td(el('strong','',w.code)),td(w.name),td(w.location),td(state(w.active)));
       const actions=el('div','actions-inline');
-      if(warehouseEdit())actions.append(button('Editar',()=>{
-        const status=controlGroup('Estado','state',['Ativo','Inativo'],w.active?'Ativo':'Inativo');
-        adminDialog('Editar armazém · '+w.code,'Os saldos ficam associados ao mesmo identificador.',[
-          field('Nome do armazém','name','text',w.name),
-          field('Localização','location','text',w.location),status
-        ],'Guardar alterações',async values=>{
-          await call('/warehouses/'+encodeURIComponent(w.id),'PATCH',{
-            name:values.name,location:values.location,active:values.state==='Ativo'});
-        });
-      },'secondary'));
+      if(warehouseEdit()){
+        actions.append(button(w.active?'Desativar':'Ativar',async()=>{
+          try{await call('/warehouses/'+encodeURIComponent(w.id),'PATCH',{active:!w.active});notify('Armazém atualizado.');await render()}
+          catch(err){notify(err.message,true)}
+        },'secondary'));
+      }
       tr.append(td(actions));return tr;
-    },{
-      placeholder:'Pesquisar código, armazém ou localização…'
-    });
+    }));
     root.append(p);
+    if(warehouseEdit())root.append(formPanel('Novo armazém','Regista uma localização sem afetar stocks existentes.',[
+      field('Código','code'),field('Nome','name'),field('Localização','location')
+    ],'Criar armazém',async data=>{await call('/warehouses','POST',data)}));
   }
   async function audit(root){
     if(!auditAccess()){root.append(el('p','','Sem acesso à auditoria.'));return}
-    const pageSize=50;
-    let offset=0;
-    root.append(heading('RASTREABILIDADE','Auditoria',
-      'Eventos registados no servidor, por utilizador e empresa.'));
-    const p=panel('Histórico de operações','Consulta paginada por data; os eventos anteriores permanecem na base de dados.');
-    const tools=el('div','admin-audit-toolbar');
-    const query=document.createElement('input');query.type='search';
-    query.placeholder='Pesquisar nesta página…';query.setAttribute('aria-label','Pesquisar na auditoria');
-    const action=document.createElement('select');action.setAttribute('aria-label','Filtrar por área');
-    for(const [value,text] of [
-      ['','Todas as ações'],['stock.','Stock'],['purchase.','Compras'],['reservation.','Reservas'],
-      ['count.','Contagens'],['user.','Utilizadores'],['warehouse.','Armazéns'],['auth.','Sessões']]){
-        const opt=el('option','',text);opt.value=value;action.append(opt);
-    }
-    tools.append(query,action);
-    const pager=el('div','admin-audit-pager');
-    const prev=button('Anterior',()=>{offset=Math.max(0,offset-pageSize);void load()},'secondary');
-    const next=button('Seguinte',()=>{offset+=pageSize;void load()},'secondary');
-    const info=el('span','admin-table-count');
-    const download=button('Exportar página CSV',()=>exportCurrent(),'secondary');
-    pager.append(prev,info,next,download);
-    const output=el('div','admin-audit-results');
-    p.append(tools,output,pager);root.append(p);
-    let records=[];
-    function exportCurrent(){
-      const rows=filterRecords();
-      const quote=value=>'"'+String(value??'').replaceAll('"','""')+'"';
-      const safe=value=>{
-        const s=String(value??'');
-        return /^[=+\-@\t\r]/.test(s)?("'"+s):s;
-      };
-      const cells=[['data','ação','tipo','identificador','utilizador']];
-      rows.forEach(item=>cells.push([item.created_at,item.action,item.target_type,item.target_id,item.actor_id]));
-      const csv='\uFEFF'+cells.map(r=>r.map(v=>quote(safe(v))).join(';')).join('\r\n');
-      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download='stockcontrol-auditoria-'+(Math.floor(offset/pageSize)+1)+'.csv';a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),1000);
-    }
-    function filterRecords(){
-      const needle=query.value.trim().toLocaleLowerCase('pt-PT');
-      return records.filter(item=>(!action.value||item.action.startsWith(action.value))&&
-        (!needle||[item.action,item.target_type,item.target_id,item.actor_id,item.detail]
-          .join(' ').toLocaleLowerCase('pt-PT').includes(needle)));
-    }
-    function draw(){
-      const found=filterRecords();
-      output.replaceChildren(found.length?table(
-        ['Data e hora','Ação','Tipo','Referência','Utilizador'],found,item=>{
-          const tr=el('tr');
-          tr.append(td(new Date(item.created_at).toLocaleString('pt-PT')),
-            td(el('strong','',item.action)),td(item.target_type),td(item.target_id),td(item.actor_id||'Sistema'));
-          return tr;
-        }):el('div','empty','Nenhuma operação para os filtros desta página.'));
-      info.textContent='Página '+(Math.floor(offset/pageSize)+1)+' · '+found.length+' de '+records.length+' eventos recebidos';
-      prev.disabled=offset===0;
-      next.disabled=records.length<pageSize;
-      download.disabled=found.length===0;
-    }
-    async function load(){
-      prev.disabled=true;next.disabled=true;
-      try{
-        records=await call('/audit?limit='+pageSize+'&offset='+offset);
-        if(!root.isConnected)return;
-        draw();
-      }catch(err){notify(err.message,true)}
-    }
-    query.addEventListener('input',draw);action.addEventListener('change',draw);
-    await load();
+    const records=await call('/audit?limit=100');
+    root.append(heading('RASTREABILIDADE','Auditoria','Ações persistidas no servidor, associadas ao utilizador e empresa.'));
+    const p=panel('Registos ('+records.length+')','Apenas leitura; sem palavras-passe ou tokens no histórico.');
+    p.append(table(['Quando','Ação','Alvo','Identificador'],records,item=>{
+      const tr=el('tr');tr.append(td(new Date(item.created_at).toLocaleString('pt-PT')),
+        td(el('strong','',item.action)),td(item.target_type),td(item.target_id));
+      return tr;
+    }));root.append(p);
   }
   async function company(root){
     const c=await call('/company');
-    const edit=can('Administrador')?button('Editar empresa',()=>{
-      adminDialog('Editar empresa','O código da empresa mantém-se inalterado.',[
-        field('Nome da empresa','name','text',c.name),
-        field('Setor de atividade','sector','text',c.sector)
-      ],'Guardar empresa',async data=>{
-        currentCompany=await call('/company','PATCH',data);
-        by('company-name').textContent=currentCompany.name;
-      });
-    },'primary'):null;
-    root.append(heading('CONFIGURAÇÃO','Empresa',
-      'Identificação e parâmetros da organização autenticada.',edit));
-    const section=el('div','section-grid');
-    const p=panel('Dados empresariais','Identificação ligada aos restantes módulos.');
-    const info=el('div','list');
-    [['Nome',c.name],['Código',c.code],['Atividade',c.sector],
-      ['Estado',c.active?'Ativa':'Inativa']].forEach(([k,v])=>{
-      const item=el('div','list-row');item.append(el('strong','',k),el('span','',v));info.append(item);
+    root.append(heading('CONFIGURAÇÃO','Empresa','Informações e identificação da organização autenticada.'));
+    const p=panel('Dados empresariais','Código imutável: '+c.code);
+    const m=el('div','list');
+    [['Nome',c.name],['Código',c.code],['Setor',c.sector],['Estado',c.active?'Ativa':'Inativa']].forEach(([k,v])=>{
+      const item=el('div','list-row');item.append(el('strong','',k),el('span','',v));m.append(item);
     });
-    p.append(info);
-    const security=panel('Segurança e dados','Regras atualmente disponíveis na Fase 2.');
-    const checks=el('div','admin-checks');
-    for(const label of ['Separação de dados por empresa na API',
-      'Permissões por função verificadas no servidor',
-      'Registo de ações e acessos','Revisão de segurança e migrações ainda necessárias']){
-      const item=el('div','admin-check');
-      item.append(el('span','policy-check',label.includes('necessárias')?'!':'✓'),el('span','',label));
-      checks.append(item);
-    }
-    security.append(checks);
-    section.append(p,security);root.append(section);
+    p.append(m);root.append(p);
+    if(can('Administrador'))root.append(formPanel('Editar empresa','Altera a designação e setor sem modificar o código.',[
+      field('Nome da empresa','name','text',c.name),field('Setor','sector','text',c.sector)
+    ],'Guardar empresa',async data=>{currentCompany=await call('/company','PATCH',data);by('company-name').textContent=currentCompany.name}));
   }
   const operationalPages=window.StockOperationsUI({call:(path,method,body)=>call(path,method,body,path.startsWith('/warehouses')?'v1':'v2'),
     el,heading,panel,table,td,button,field,select,formPanel,
@@ -457,11 +294,10 @@
     canAudit:()=>['Administrador','Gestor','Auditor'].includes(currentUser?.role),
     canUsers:()=>['Administrador','Gestor','Auditor'].includes(currentUser?.role)
   });
-  const pages={dashboard,users,warehouses,audit,company,...adminPages,...operationalPages};
+  const pages={dashboard,...adminPages,...operationalPages};
   async function render(){
     const container=by('content');
     window.StockControlUXReset?.();
-    document.querySelectorAll('dialog.stock-admin-dialog').forEach(d=>d.close());
     container.replaceChildren();
     by('breadcrumb-page').textContent=navLinks.find(x=>x[0]===page)?.[2]||'Visão geral';
     try{await (pages[page]||dashboard)(container)}
