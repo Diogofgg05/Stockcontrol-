@@ -256,3 +256,34 @@ def test_duplicate_simultaneous_request_ids_are_rejected(e):
             "/api/v2/movements",headers=a,json=payload),range(2)))
     assert sorted(r.status_code for r in replies)==[201,409]
     assert c.get("/api/v2/balances",headers=a).json()[0]["on_hand"]=="5"
+
+
+def test_supplier_edit_requires_manager_and_preserves_tenant_boundaries(e):
+    c,app,a,b,wa,wb,m,part,sup,post,auth=e
+    supplier_id=sup["id"]
+    new=c.patch("/api/v2/suppliers/"+supplier_id,headers=a,json={
+        "name":"Faptech Distribuição","email":"compras@faptech.example"})
+    assert new.status_code==200,new.text
+    assert new.json()["name"]=="Faptech Distribuição"
+    assert new.json()["email"]=="compras@faptech.example"
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=b,json={"active":False}).status_code==404
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=a,json={"name":"   "}).status_code==422
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=a,json={"email":"invalid"}).status_code==422
+    operator=c.post("/api/v1/users",headers=a,json={
+        "name":"Operador Stock","email":"operator@aect.example",
+        "password":"StrongOperatorPass123","role":"Operador"}).json()
+    op_auth=auth(email="operator@aect.example",password="StrongOperatorPass123")
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=op_auth,json={"active":False}).status_code==403
+    po=post("/purchase-orders",{"code":"PO-SUPPLIER-BLOCK","supplier_id":supplier_id,
+          "warehouse_id":wa,"items":[{"material_id":m["id"],"quantity":"3"}]})
+    assert po["state"]=="Aberta"
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=a,json={"active":False}).status_code==409
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=a,json={"name":"Faptech Atualizada"}).status_code==200
+    line=po["lines"][0]
+    response=c.post("/api/v2/purchase-orders/"+po["id"]+"/receive",headers=a,json={
+        "line_id":line["id"],"quantity":"3","request_id":"REC-CLOSE-SUPPLIER-01"})
+    assert response.status_code==200
+    assert c.patch("/api/v2/suppliers/"+supplier_id,headers=a,json={"active":False}).status_code==200
+    assert c.get("/api/v2/suppliers",headers=a).json()[0]["active"] is False
+    events=c.get("/api/v1/audit",headers=a).json()
+    assert any(event["action"]=="supplier.updated" for event in events)
