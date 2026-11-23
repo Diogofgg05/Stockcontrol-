@@ -293,7 +293,7 @@ def create_app(database_url=None, setup_key=None):
         if request.url.path.startswith("/admin"):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'none'; script-src 'self'; style-src 'self'; "
-                "img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+                "img-src 'self' blob:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         return response
 
     assets = Path(__file__).resolve().parent / "static"
