@@ -67,7 +67,12 @@ def test_phase2_browser_and_screenshots(tmp_path):
             login(page,origin)
             page.screenshot(path=str(CAPTURES/"dashboard-desktop.png"))
             page.locator('[data-page="inventory"]').click()
-            page.get_by_role("heading",name="Inventário real").wait_for()
+            page.wait_for_timeout(1000)
+            assert page.get_by_role("heading",name="Inventário real").count()==1, (
+                "Inventory route failed. Visible content: "+page.locator("#content").inner_text()[:800]
+                +" | Toast: "+page.locator("#toast").inner_text()
+                +" | JS errors: "+str(errors)
+            )
             page.screenshot(path=str(CAPTURES/"inventory-empty-desktop.png"))
             form=page.locator('.edit-form').last
             form.locator('[name="sku"]').fill("CAB-001")
