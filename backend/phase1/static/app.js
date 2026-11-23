@@ -281,7 +281,7 @@
       field('Nome da empresa','name','text',c.name),field('Setor','sector','text',c.sector)
     ],'Guardar empresa',async data=>{currentCompany=await call('/company','PATCH',data);by('company-name').textContent=currentCompany.name}));
   }
-  const operationalPages=window.StockOperationsUI({call:(path,method,body)=>call(path,method,body,'v2'),
+  const operationalPages=window.StockOperationsUI({call:(path,method,body)=>call(path,method,body,path.startsWith('/warehouses')?'v1':'v2'),
     el,heading,panel,table,td,button,field,select,formPanel,
     notify,render,canManage:()=>['Administrador','Gestor'].includes(currentUser?.role),
     canWrite:()=>['Administrador','Gestor','Operador'].includes(currentUser?.role),getToken:()=>token});
