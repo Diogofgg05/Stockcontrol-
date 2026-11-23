@@ -19,6 +19,7 @@ jobs:
           name: stockcontrol-v8-source
           path: |
             portal_php/public/assets/design-v5/
+            portal_php/public/assets/design-v8/
             tests/stockcontrol_v5_browser.cjs
             tests/stockcontrol_v5_model.test.cjs
           retention-days: 2
@@ -40,13 +41,17 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
-      - name: Capture real web application and mobile view
+      - name: Capture V8 premium light and validate stock interactions
+        run: node --test tests/stockcontrol_v8_visual.cjs
+      - name: Existing V5 and V6 application E2E regression
         run: node --test tests/stockcontrol_v5_browser.cjs
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: stockcontrol-v8-real-screenshots
-          path: tests/v5-previews/
+          path: |
+            tests/v8-previews/
+            tests/v5-previews/
           retention-days: 14
           if-no-files-found: ignore
