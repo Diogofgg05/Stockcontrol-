@@ -440,9 +440,10 @@ def create_app(database_url=None, setup_key=None):
                 user.name = clean_name(payload.name, "Utilizador", 80)
             except ValueError as exc:
                 raise HTTPException(422, str(exc)) from exc
+        revoke_sessions = user.role != new_role or not new_active
         user.role = new_role
         user.active = new_active
-        if not new_active:
+        if revoke_sessions:
             db.query(AuthSession).filter(AuthSession.company_id == company.id,
                                          AuthSession.user_id == user.id).delete(synchronize_session=False)
         audit(db, company.id, actor.id, "user.updated", "user", user.id,

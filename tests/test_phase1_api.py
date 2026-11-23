@@ -82,9 +82,12 @@ def test_user_role_enforcement_and_self_demote_last_admin(scenario):
     own_id = c.get("/api/v1/auth/me", headers=admin).json()["user"]["id"]
     assert c.patch("/api/v1/users/"+own_id,headers=admin,json={"role":"Auditor"}).status_code == 409
     assert c.patch("/api/v1/users/"+own_id,headers=admin,json={"active":False}).status_code == 409
-    # Grant a second administrator, then demote the first; new role enforced on next call.
+    # Role changes revoke existing sessions; fresh login enforces the new role.
     assert c.patch("/api/v1/users/"+uid,headers=admin,json={"role":"Administrador"}).status_code == 200
     assert c.patch("/api/v1/users/"+own_id,headers=admin,json={"role":"Auditor"}).status_code == 200
+    assert c.get("/api/v1/auth/me", headers=operator).status_code == 401
+    assert c.get("/api/v1/auth/me", headers=admin).status_code == 401
+    admin = login()
     assert c.post("/api/v1/users", headers=admin, json={
         "name":"Not allowed", "email":"no@a.example", "role":"Operador","password":OTHER}).status_code == 403
 
