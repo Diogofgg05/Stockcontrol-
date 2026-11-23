@@ -6,6 +6,7 @@ on:
       - 'backend/phase1/**'
       - 'tests/test_phase1_api.py'
       - 'tests/test_phase2_api.py'
+      - 'tests/test_phase2_browser.py'
       - 'backend/phase1/static/**'
       - '.github/workflows/stockcontrol-phase2.yml'
   pull_request:
@@ -47,3 +48,27 @@ jobs:
             tests/test_phase2_api.py
           if-no-files-found: ignore
           retention-days: 7
+
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install API and Chromium
+        run: |
+          python -m pip install -r backend/phase1/requirements.txt
+          python -m pip install pytest httpx playwright
+          python -m playwright install --with-deps chromium
+      - name: Real desktop and mobile application tests
+        run: python -m pytest -q tests/test_phase2_browser.py
+      - name: Preserve real screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-phase2-screenshots
+          path: tests/phase2-previews/
+          if-no-files-found: ignore
+          retention-days: 14
