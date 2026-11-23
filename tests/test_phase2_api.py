@@ -229,3 +229,29 @@ def test_cannot_disable_warehouse_with_stock_or_pending_order(e):
         "line_id":po["lines"][0]["id"],"quantity":"4","request_id":"WH-REC-001"})
     assert receipt.status_code==200
     assert c.patch("/api/v1/warehouses/"+wa,headers=a,json={"active":False}).status_code==409
+
+
+def test_two_simultaneous_exits_cannot_oversell(e):
+    from concurrent.futures import ThreadPoolExecutor
+    c,app,a,b,wa,wb,m,part,sup,post,auth=e
+    post("/movements",op(wa,m["id"],"Entrada","10","RACE-START-0001"))
+    payloads=[op(wa,m["id"],"Saída","7","RACE-EXIT-000"+str(i)) for i in (1,2)]
+    def execute(payload):
+        return c.post("/api/v2/movements",headers=a,json=payload)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        replies=list(executor.map(execute,payloads))
+    assert sorted(r.status_code for r in replies)==[201,409]
+    balances=c.get("/api/v2/balances",headers=a).json()
+    assert balances[0]["on_hand"]=="3"
+    assert balances[0]["reserved"]=="0"
+
+
+def test_duplicate_simultaneous_request_ids_are_rejected(e):
+    from concurrent.futures import ThreadPoolExecutor
+    c,app,a,b,wa,wb,m,part,sup,post,auth=e
+    payload=op(wa,m["id"],"Entrada","5","RACE-REPEAT-0001")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        replies=list(executor.map(lambda _:c.post(
+            "/api/v2/movements",headers=a,json=payload),range(2)))
+    assert sorted(r.status_code for r in replies)==[201,409]
+    assert c.get("/api/v2/balances",headers=a).json()[0]["on_hand"]=="5"
