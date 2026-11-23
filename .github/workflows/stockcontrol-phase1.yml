@@ -1,0 +1,68 @@
+name: StockControl Phase 1 API
+on:
+  push:
+    branches: ['feat/stockcontrol-phase1-administration']
+  pull_request:
+    paths:
+      - 'backend/phase1/**'
+      - 'tests/test_phase1_api.py'
+      - 'tests/test_phase1_browser.py'
+      - '.github/workflows/stockcontrol-phase1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/phase1/requirements.txt
+          python -m pip install pytest httpx
+      - name: Syntax
+        run: |
+          python -m py_compile backend/phase1/main.py backend/phase1/manage.py tests/test_phase1_api.py
+      - name: API authentication, tenant isolation, permissions and audit
+        run: python -m pytest -q tests/test_phase1_api.py
+      - name: Archive backend source for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-phase1-admin-source
+          path: |
+            backend/phase1/
+            tests/test_phase1_api.py
+          retention-days: 7
+          if-no-files-found: ignore
+
+  admin-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install API and Chromium test runner
+        run: |
+          python -m pip install -r backend/phase1/requirements.txt
+          python -m pip install pytest httpx playwright
+          python -m playwright install --with-deps chromium
+      - name: Test real browser administration desktop and mobile
+        run: python -m pytest -q tests/test_phase1_browser.py
+      - name: Preserve screenshots of the actual web interface
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-phase1-real-screenshots
+          path: tests/phase1-previews/
+          if-no-files-found: ignore
+          retention-days: 14

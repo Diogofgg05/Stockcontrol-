@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f8fc">
+<meta name="robots" content="noindex,nofollow">
+<title>StockControl · Administração</title>
+<link rel="stylesheet" href="/admin-assets/styles.css">
+<script src="/admin-assets/app.js" defer></script>
+</head>
+<body>
+<a href="#main" class="skip">Saltar para o conteúdo</a>
+<div id="app">
+<section id="login-screen" class="login-screen">
+  <div class="login-panel">
+    <div class="brand"><span class="logo">S</span><div><strong>stockcontrol<span class="blue">.</span></strong><small>ADMINISTRAÇÃO</small></div></div>
+    <div class="login-header"><span class="eyebrow">ÁREA PRIVADA</span><h1>Bem-vindo de volta.</h1><p>Gere a tua equipa, armazéns e permissões num único lugar.</p></div>
+    <form id="login-form" class="form-grid">
+      <label>Código da empresa<input name="company_code" placeholder="Ex.: AECT" maxlength="24" required autocomplete="organization"></label>
+      <label>Email<input name="email" type="email" placeholder="admin@empresa.pt" required autocomplete="username"></label>
+      <label>Palavra-passe<input name="password" type="password" minlength="12" required autocomplete="current-password"></label>
+      <button class="primary full" type="submit">Entrar na administração</button>
+    </form>
+    <p class="security-hint">Sessão temporária no navegador. A palavra-passe não fica guardada.</p>
+  </div>
+  <aside class="login-aside" aria-hidden="true"><div class="sphere"></div><div class="login-aside-inner"><span class="eyebrow">STOCKCONTROL · PHASE 1</span><h2>Uma operação mais organizada começa aqui.</h2><p>Equipas, armazéns, regras de acesso e rastreabilidade.</p><div class="mini-features"><span>Gestão centralizada</span><span>Permissões por perfil</span><span>Histórico auditável</span></div></div></aside>
+</section>
+<div id="workspace" class="workspace hidden">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">S</span><div><strong>stockcontrol<span class="blue">.</span></strong><small>ADMINISTRAÇÃO</small></div></div>
+    <div class="company-chip"><span class="company-dot"></span><div><strong id="company-name">Empresa</strong><small id="company-code"></small></div></div>
+    <nav id="navigation" aria-label="Áreas de administração"></nav>
+    <div class="side-footer"><span class="secure-dot"></span> Sessão autenticada <small>Fase 1 · Backend</small></div>
+  </aside>
+  <div class="main-column">
+    <header class="topbar"><button id="menu-toggle" class="mobile-menu" aria-label="Abrir menu">☰</button><span class="breadcrumb">Administração <span> / </span> <b id="breadcrumb-page">Visão geral</b></span><div class="topbar-right"><span class="session-pill">● Sessão ativa</span><div class="person"><strong id="user-name"></strong><small id="user-role"></small></div><button id="logout" class="subtle" type="button">Terminar sessão</button></div></header>
+    <main id="main" tabindex="-1"><div id="content"></div><footer>StockControl Fase 1 · Administração autenticada · Não é ainda uma aplicação comercial validada</footer></main>
+  </div>
+</div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
