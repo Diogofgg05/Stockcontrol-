@@ -15,8 +15,12 @@
     clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='toast'},4500);
   }
   const navLinks=[
-    ['dashboard','▦','Visão geral'],['users','♙','Utilizadores'],
-    ['warehouses','▤','Armazéns'],['audit','◷','Auditoria'],
+    ['dashboard','▦','Visão geral'],['inventory','◈','Inventário'],
+    ['stockMovements','⇄','Movimentos'],['reservations','▣','Reservas'],
+    ['purchases','▤','Compras'],['suppliers','♢','Fornecedores'],
+    ['counts','☷','Contagens físicas'],['scanner','▧','QR Code'],
+    ['users','♙','Utilizadores'],['warehouses','▤','Armazéns'],
+    ['audit','◷','Auditoria'],
     ['company','⚙','Empresa']
   ];
   const can=(role)=>currentUser?.role===role;
@@ -133,15 +137,19 @@
     p.append(form);return p;
   }
   async function dashboard(root){
-    const [wh,events,users]=await Promise.all([
+    const [wh,events,users,inventory]=await Promise.all([
       call('/warehouses'),auditAccess()?call('/audit?limit=5'):Promise.resolve([]),
-      usersAccess()?call('/users'):Promise.resolve([])
+      usersAccess()?call('/users'):Promise.resolve([]),call('/stock/summary')
     ]);
     const metrics=el('div','grid-metrics');
     metrics.append(metric('Armazéns',wh.length,'Localizações registadas'),
       metric('Armazéns ativos',wh.filter(w=>w.active).length,'Prontos a operar'),
       metric('Colaboradores',users.length,usersAccess()?'Contas na empresa':'Acesso restrito'),
-      metric('Atividade recente',events.length,'Últimos registos disponíveis'));
+      metric('Atividade recente',events.length,'Últimos registos disponíveis'),
+      metric('Materiais no catálogo',inventory.materials,'Referências reais'),
+      metric('Locais com stock baixo',inventory.low_stock_locations,'Stock disponível face ao mínimo'),
+      metric('Reservas ativas',inventory.active_reservations,'Alocadas à produção'),
+      metric('Saldos por armazém',inventory.locations_with_stock,'Pontos com movimentos'));
     root.append(heading('CENTRO DE GESTÃO','Visão geral','Administração da empresa e operações de controlo.'),metrics);
     const sections=el('div','section-grid');
     const p=panel('Armazéns','Estado atual das localizações');
@@ -164,7 +172,8 @@
     const lower=el('div','section-grid');
     const shortcuts=panel('Acessos rápidos','Abre diretamente as áreas mais utilizadas.');
     const quick=el('div','quick-links');
-    const entries=[['warehouses','▤','Gerir armazéns'],['company','⚙','Dados da empresa']];
+    const entries=[['inventory','◈','Consultar inventário'],['stockMovements','⇄','Registar movimentos'],
+      ['reservations','▣','Reservas de produção'],['purchases','▤','Encomendas']];
     if(usersAccess())entries.unshift(['users','♙','Equipa e acessos']);
     if(auditAccess())entries.push(['audit','◷','Consultar auditoria']);
     entries.forEach(([key,glyph,label])=>{
@@ -272,7 +281,10 @@
       field('Nome da empresa','name','text',c.name),field('Setor','sector','text',c.sector)
     ],'Guardar empresa',async data=>{currentCompany=await call('/company','PATCH',data);by('company-name').textContent=currentCompany.name}));
   }
-  const pages={dashboard,users,warehouses,audit,company};
+  const operationalPages=window.StockOperationsUI({call,el,heading,panel,table,td,button,field,select,formPanel,
+    notify,render,canManage:()=>['Administrador','Gestor'].includes(currentUser?.role),
+    canWrite:()=>['Administrador','Gestor','Operador'].includes(currentUser?.role),getToken:()=>token});
+  const pages={dashboard,users,warehouses,audit,company,...operationalPages};
   async function render(){
     const container=by('content');
     container.replaceChildren();
