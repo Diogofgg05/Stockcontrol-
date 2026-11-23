@@ -161,6 +161,28 @@
     });
     if(!events.length)alist.append(el('div','empty',auditAccess()?'Sem operações registadas.':'Sem permissão para consultar auditoria.'));
     a.append(alist);sections.append(a);root.append(sections);
+    const lower=el('div','section-grid');
+    const shortcuts=panel('Acessos rápidos','Abre diretamente as áreas mais utilizadas.');
+    const quick=el('div','quick-links');
+    const entries=[['warehouses','▤','Gerir armazéns'],['company','⚙','Dados da empresa']];
+    if(usersAccess())entries.unshift(['users','♙','Equipa e acessos']);
+    if(auditAccess())entries.push(['audit','◷','Consultar auditoria']);
+    entries.forEach(([key,glyph,label])=>{
+      const b=button(glyph+'  '+label,()=>{page=key;nav();void render()},'quick-link');
+      quick.append(b);
+    });
+    shortcuts.append(quick);lower.append(shortcuts);
+    const policies=panel('Proteções de administração','Regras essenciais aplicadas pelo servidor.');
+    const checks=el('div','admin-checks');
+    const labels=['Último administrador protegido',
+      'Operações restritas por perfil',
+      'Sessões com expiração e revogação',
+      'Dados separados por empresa'];
+    labels.forEach(label=>{
+      const item=el('div','admin-check');
+      item.append(el('span','policy-check','✓'),el('span','',label));checks.append(item);
+    });
+    policies.append(checks);lower.append(policies);root.append(lower);
   }
   async function users(root){
     if(!usersAccess()){root.append(el('p','','Sem permissão para consultar utilizadores.'));return}
@@ -181,6 +203,20 @@
       },'secondary');
       save.disabled=!can('Administrador');
       actions.append(save);
+      if(can('Administrador')){
+        actions.append(button('Redefinir senha',()=>{
+          document.getElementById('password-reset')?.remove();
+          const reset=formPanel('Palavra-passe · '+user.name,
+            'A redefinição invalida as sessões existentes deste utilizador.',
+            [field('Nova palavra-passe (12+ caracteres)','password','password')],
+            'Redefinir palavra-passe',async values=>{
+              await call('/users/'+encodeURIComponent(user.id)+'/reset-password','POST',values);
+            });
+          reset.id='password-reset';
+          by('content').append(reset);
+          reset.scrollIntoView({behavior:'smooth',block:'center'});
+        },'subtle'));
+      }
       tr.append(td(actions));
       return tr;
     }));root.append(p);
