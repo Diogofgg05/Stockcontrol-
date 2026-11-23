@@ -3,6 +3,7 @@
 'use strict';
 (()=>{
   const original=window.StockOperationsUI;
+  let activeFormObserver=null;
   if(typeof original!=='function')return;
   const iconFor=m=>{
     const text=(m.name+' '+m.category).toLocaleLowerCase('pt-PT');
@@ -52,26 +53,22 @@
       if(panel.id==='phase2-action'){
         panel.remove();
         const dlg=modal(panel.querySelector('h2')?.textContent||label,panel);
-        const observer=new MutationObserver(()=>{if(!root.isConnected){modalClose(dlg);observer.disconnect()}});
-        observer.observe(document.getElementById('content'),{childList:true});
+        const observer=new MutationObserver(()=>{modalClose(dlg);observer.disconnect()});
+        observer.observe(root,{childList:true});
       }else{
         panel.remove();
         const trigger=button(label,()=>{
           const dlg=modal(panel.querySelector('h2')?.textContent||label,panel);
-          const observer=new MutationObserver(()=>{
-            if(!root.isConnected){modalClose(dlg);observer.disconnect()}
-          });
-          observer.observe(document.getElementById('content'),{childList:true});
+          const observer=new MutationObserver(()=>{modalClose(dlg);observer.disconnect()});
+          observer.observe(root,{childList:true});
         },'primary stock-ux-add');
         actions.append(trigger);
       }
     });
     bind();
-    const observer=new MutationObserver(()=>{
-      if(!root.isConnected){observer.disconnect();return}
-      bind();
-    });
-    observer.observe(document.getElementById('content'),{childList:true,subtree:true});
+    if(activeFormObserver)activeFormObserver.disconnect();
+    activeFormObserver=new MutationObserver(bind);
+    activeFormObserver.observe(root,{childList:true,subtree:true});
   }
   function addGenericFilter(root,except=null){
     root.querySelectorAll('.panel .table-scroll').forEach(wrap=>{
