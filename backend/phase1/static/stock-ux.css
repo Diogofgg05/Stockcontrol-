@@ -29,7 +29,7 @@
 .stock-ux-modal-header h2{font-size:19px;margin:0;color:#243c5a}
 .stock-ux-dialog>.panel{border:0;box-shadow:none;margin:0;border-radius:0}
 .stock-ux-dialog>.panel .panel-title{padding:7px 20px 12px}
-.stock-ux-dialog>.panel .panel-title h2{font-size:15px}
+.stock-ux-dialog>.panel .panel-title h2{display:none} /* title already rendered by dialog header */
 .stock-ux-dialog>.panel .panel-title p{font-size:11px}
 .stock-ux-dialog>.panel .edit-form{padding:0 20px 22px}
 .stock-ux-dialog .form-grid{display:grid;gap:12px}
