@@ -311,10 +311,10 @@ def move(db,op,balance,delta):
                          delta_milli=delta,balance_after_milli=balance.on_hand_milli))
 
 
-def material_out(m,b=None):
+def material_out(m,b=None,has_photo=False):
     o={"id":m.id,"sku":m.sku,"name":m.name,"category":m.category,"unit":m.unit,
        "minimum":display(m.minimum_milli),"unit_cost":str(Decimal(m.unit_cost_cents)/100),
-       "active":m.active,"qr_code":m.qr_code}
+       "active":m.active,"qr_code":m.qr_code,"has_photo":bool(has_photo)}
     if b is not None:
         o.update({"warehouse_id":b.warehouse_id,"on_hand":display(b.on_hand_milli),
                   "reserved":display(b.reserved_milli),"available":display(b.on_hand_milli-b.reserved_milli)})
@@ -346,13 +346,15 @@ def install_operations(app,db_session,get_context,require,audit_func):
         if warehouse_id:
             scoped(db,Warehouse,company_id,warehouse_id)
         ms=db.scalars(select(Material).where(Material.company_id==company_id).order_by(Material.sku).limit(500)).all()
+        from .media import MaterialPhoto
+        photos=set(db.scalars(select(MaterialPhoto.material_id).where(MaterialPhoto.company_id==company_id)).all())
         if warehouse_id:
             balances=db.scalars(select(StockBalance).where(
                 StockBalance.company_id==company_id,StockBalance.warehouse_id==warehouse_id)).all()
             lookup={b.material_id:b for b in balances}
             return [material_out(m,lookup.get(m.id) or StockBalance(warehouse_id=warehouse_id,
-                           on_hand_milli=0,reserved_milli=0)) for m in ms]
-        return [material_out(m) for m in ms]
+                           on_hand_milli=0,reserved_milli=0),m.id in photos) for m in ms]
+        return [material_out(m,has_photo=m.id in photos) for m in ms]
 
     @app.post("/api/v2/materials",status_code=201)
     def create_material(payload:MaterialIn,ctx=Depends(require(*MANAGE_ROLES)),db:Session=Depends(db_session)):
