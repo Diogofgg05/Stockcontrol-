@@ -1,3 +1,13 @@
+## StockControl V9 — imagens industriais integradas
+
+A versão [Industrial Visual](portal_php/public/assets/design-v9/) preserva o motor de demonstração offline e acrescenta ilustrações originais de armazém, eletricidade, metais, fixação, resina, rolamentos e cabos. Inclui hero visual, filtros com imagens e miniaturas de materiais.
+
+**Abrir:** `portal_php/public/assets/design-v9/index.html`.
+
+[Documentação da V9](portal_php/public/assets/design-v9/README.md) · Esta é uma demo sem backend, autenticação ou dados de produção.
+
+---
+
 ## StockControl V8 — Premium Light (nova pré-visualização)
 
 A versão [Premium Light](portal_php/public/assets/design-v8/) apresenta o mesmo workspace industrial offline com uma interface clara, azul e branca, mais legível e responsiva, sem substituir a V6 escura. Abre `portal_php/public/assets/design-v8/index.html`.
