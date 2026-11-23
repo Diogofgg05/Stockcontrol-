@@ -67,8 +67,11 @@
       }
     });
     bind();
-    const observer=new MutationObserver(bind);
-    observer.observe(root,{childList:true});
+    const observer=new MutationObserver(()=>{
+      if(!root.isConnected){observer.disconnect();return}
+      bind();
+    });
+    observer.observe(document.getElementById('content'),{childList:true,subtree:true});
   }
   function addGenericFilter(root,except=null){
     root.querySelectorAll('.panel .table-scroll').forEach(wrap=>{
@@ -99,9 +102,8 @@
     img.src=fallback;frame.append(img);
     frame.title=m.has_photo?'Fotografia associada ao material':'Ilustração da categoria, não fotografia real';
     if(m.has_photo){
-      h.call('/materials/'+encodeURIComponent(m.id)+'/photo','GET').then(()=>{}).catch(()=>{});
       // Authenticated images use a blob: never expose bearer token in the URL.
-      fetch('/api/v2/materials/'+encodeURIComponent(m.id)+'/photo',{
+      const loadPhoto=()=>fetch('/api/v2/materials/'+encodeURIComponent(m.id)+'/photo',{
         headers:{Authorization:'Bearer '+h.getToken()},credentials:'omit',cache:'no-store'
       }).then(async resp=>{
         if(!resp.ok)throw Error('Fotografia indisponível');
@@ -113,6 +115,14 @@
         img.onerror=()=>{URL.revokeObjectURL(url);img.src=fallback};
         img.src=url;
       }).catch(()=>{frame.title='Fotografia indisponível; ilustração de categoria'});
+      if('IntersectionObserver' in window){
+        const observer=new IntersectionObserver(entries=>{
+          if(entries.some(entry=>entry.isIntersecting)){
+            observer.disconnect();loadPhoto();
+          }
+        },{rootMargin:'180px'});
+        observer.observe(frame);
+      }else loadPhoto();
     }
     return frame;
   }
