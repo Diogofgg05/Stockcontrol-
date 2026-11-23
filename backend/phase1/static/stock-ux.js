@@ -4,6 +4,10 @@
 (()=>{
   const original=window.StockOperationsUI;
   let activeFormObserver=null;
+  window.StockControlUXReset=()=>{
+    if(activeFormObserver){activeFormObserver.disconnect();activeFormObserver=null}
+    document.querySelectorAll('dialog.stock-ux-dialog').forEach(modalClose);
+  };
   if(typeof original!=='function')return;
   const iconFor=m=>{
     const text=(m.name+' '+m.category).toLocaleLowerCase('pt-PT');
