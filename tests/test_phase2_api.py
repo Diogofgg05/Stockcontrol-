@@ -209,3 +209,23 @@ def test_inventory_audit_and_supplier_tenant_isolation(e):
     assert any(row["action"]=="stock.entrada" for row in history)
     assert len(c.get("/api/v2/suppliers",headers=b).json())==0
     assert not any(x["target_id"]==m["id"] for x in c.get("/api/v1/audit",headers=b).json())
+
+
+def test_cannot_disable_warehouse_with_stock_or_pending_order(e):
+    c,app,a,b,wa,wb,m,part,sup,post,auth=e
+    extra=c.post("/api/v1/warehouses",headers=a,json={
+        "code":"AUX-002","name":"Armazém auxiliar","location":"Porto"})
+    assert extra.status_code==201
+    post("/movements",op(wa,m["id"],"Entrada","6","WH-INSIDE-001"))
+    assert c.patch("/api/v1/warehouses/"+wa,headers=a,json={"active":False}).status_code==409
+    transfer={"from_warehouse_id":wa,"to_warehouse_id":extra.json()["id"],
+              "material_id":m["id"],"quantity":"6","request_id":"WH-TRANS-001"}
+    assert c.post("/api/v2/transfers",headers=a,json=transfer).status_code==201
+    po=post("/purchase-orders",{"code":"PO-PENDING-01","supplier_id":sup["id"],
+        "warehouse_id":wa,"items":[{"material_id":part["id"],"quantity":"4"}]})
+    assert po["state"]=="Aberta"
+    assert c.patch("/api/v1/warehouses/"+wa,headers=a,json={"active":False}).status_code==409
+    receipt=c.post("/api/v2/purchase-orders/"+po["id"]+"/receive",headers=a,json={
+        "line_id":po["lines"][0]["id"],"quantity":"4","request_id":"WH-REC-001"})
+    assert receipt.status_code==200
+    assert c.patch("/api/v1/warehouses/"+wa,headers=a,json={"active":False}).status_code==409
