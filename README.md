@@ -1,3 +1,13 @@
+## StockControl Fase 2 — gestão operacional ligada ao servidor
+
+A Fase 2 acrescenta **inventário persistente e operações industriais reais** à área autenticada em [`backend/phase1/`](backend/phase1/). Os novos módulos incluem materiais, saldos por armazém, movimentos e transferências, reservas de produção, fornecedores, encomendas, contagens físicas, códigos QR e auditoria. O painel web em `/admin` tem navegação para estas secções.
+
+[Documentação funcional, execução, testes e limitações da Fase 2](backend/phase1/PHASE2.md).
+
+A V9 continua uma demonstração visual offline separada. A aplicação com backend deve ser executada localmente com Python e PostgreSQL ou SQLite de desenvolvimento, **não está pronta para publicação como SaaS comercial**.
+
+---
+
 # StockControl · Fase 1 de Administração (backend)
 
 A Fase 1 tem **painel de administração autenticado** e API FastAPI própria em [backend/phase1/](backend/phase1/). Permite criar empresas, autenticar administradores e colaboradores, gerir perfis e armazéns, consultar auditoria e revogar sessões.
