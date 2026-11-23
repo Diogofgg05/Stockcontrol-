@@ -145,56 +145,155 @@ window.StockOperationsUI = function(h){
     ],'Criar reserva',async values=>{await call('/reservations','POST',values)}));
   }
   async function suppliers(root){
-    const rows=await call('/suppliers');
-    root.append(heading('CADEIA DE FORNECIMENTO','Fornecedores','Contactos e códigos associados à empresa.'));
-    const p=panel('Fornecedores ('+rows.length+')','Registos isolados por empresa.');
-    p.append(rows.length?table(['Código','Nome','Email','Estado'],rows,r=>{
-      const tr=el('tr');tr.append(td(text(r.code)),td(r.name),td(r.email||'—'),
-        td(el('span','state',r.active?'Ativo':'Inativo')));return tr;
-    }):empty('Regista um fornecedor para criares encomendas.'));
+    const suppliers=await call('/suppliers');
+    const active=suppliers.filter(s=>s.active).length;
+    root.append(heading('CADEIA DE FORNECIMENTO','Fornecedores',
+      'Centraliza os contactos de compra, acompanha o estado de cada parceiro e mantém o histórico.'));
+    const stats=el('div','stock-summary-inline');
+    stats.append(metric('Fornecedores',suppliers.length,'Registados na empresa'),
+      metric('Ativos',active,'Disponíveis para compras'),
+      metric('Inativos',suppliers.length-active,'Sem novas encomendas'));
+    root.append(stats);
+    const p=panel('Diretório de fornecedores','A atualização é validada pelo servidor; não é possível desativar quem tenha encomendas em aberto.');
+    p.append(suppliers.length?table(['Fornecedor','Contacto','Estado','Gestão'],suppliers,s=>{
+      const tr=el('tr'),identity=el('div','stock-entity-identity');
+      identity.append(el('strong','',s.name),el('small','subtext',s.code));
+      tr.append(td(identity),td(s.email||'Sem email'));
+      tr.append(td(el('span',s.active?'state':'state off',s.active?'Ativo':'Inativo')));
+      const actions=el('div','actions-inline');
+      if(canManage())actions.append(button('Editar',()=>{
+        actionPanel(root,'Editar fornecedor · '+s.code,[
+          field('Nome do fornecedor','name','text',s.name),
+          field('Email de contacto (opcional)','email','email',s.email||'',false),
+          choose('Estado','state',[
+            {id:'Ativo',title:'Ativo'},{id:'Inativo',title:'Inativo'}],s.active?'Ativo':'Inativo')
+        ],async data=>{
+          await call('/suppliers/'+encodeURIComponent(s.id),'PATCH',{
+            name:data.name,email:data.email||null,active:data.state==='Ativo'});
+        });
+      },'secondary'));
+      tr.append(td(actions));return tr;
+    }):empty('Ainda não há fornecedores. Regista o primeiro fornecedor.'));
     root.append(p);
-    if(canManage())root.append(formPanel('Adicionar fornecedor','Código exclusivo para esta empresa.',[
-      field('Código','code'),field('Nome','name'),field('Email (opcional)','email','email','',false)
-    ],'Adicionar fornecedor',async values=>{if(!values.email)values.email=null;await call('/suppliers','POST',values)}));
+    if(canManage())root.append(formPanel('Novo fornecedor',
+      'Regista um fornecedor com um código único para esta empresa.',[
+      field('Código','code'),field('Designação','name'),field('Email (opcional)','email','email','',false)
+    ],'Adicionar fornecedor',async values=>{
+      if(!values.email)values.email=null;
+      await call('/suppliers','POST',values);
+    }));
   }
   async function purchases(root){
     const [materials,warehouses,suppliers,orders]=await get(['/materials','/warehouses','/suppliers','/purchase-orders']);
-    const m=Object.fromEntries(materials.map(x=>[x.id,x.name]));
-    root.append(heading('COMPRAS INDUSTRIAIS','Encomendas','Receções parciais atualizam o inventário automaticamente.'));
-    const p=panel('Encomendas ('+orders.length+')','Cada receção fica associada à encomenda original.');
-    for(const order of orders){
-      const part=el('div','purchase-summary');
-      const head=el('div','list-row'),copy=el('div');
-      copy.append(text(order.code),el('small','subtext',order.state));
-      head.append(copy,el('span','pill',order.lines.length+' linhas'));part.append(head);
-      const rows=table(['Material','Encomendado','Recebido','Por receber','Ação'],order.lines,line=>{
-        const tr=el('tr'),missing=Number(line.ordered)-Number(line.received);
-        tr.append(td(m[line.material_id]||'Material'),td(num(line.ordered)),
-          td(num(line.received)),td(num(missing)));
-        const actions=el('div','actions-inline');
-        if(missing>0&&canWrite())actions.append(button('Receber',()=>{
-          actionPanel(root,'Receber '+order.code,[quantityRow('Quantidade recebida','quantity',String(missing))],
-            async values=>{await call('/purchase-orders/'+encodeURIComponent(order.id)+'/receive','POST',{
-              line_id:line.id,quantity:values.quantity,request_id:request()
-            })});
-        },'secondary'));
-        tr.append(td(actions));return tr;
-      });
-      part.append(rows);p.append(part);
+    const materialNames=Object.fromEntries(materials.map(x=>[x.id,x.name]));
+    const supplierNames=Object.fromEntries(suppliers.map(x=>[x.id,x.name]));
+    const warehouseNames=Object.fromEntries(warehouses.map(x=>[x.id,x.name]));
+    const pending=orders.filter(o=>o.state!=='Concluída');
+    root.append(heading('COMPRAS INDUSTRIAIS','Encomendas',
+      'Planeia as compras, regista receções parciais e atualiza o stock automaticamente.'));
+    const stats=el('div','stock-summary-inline');
+    stats.append(metric('Encomendas',orders.length,'Registadas'),
+      metric('A receber',pending.length,'Em aberto ou parciais'),
+      metric('Concluídas',orders.length-pending.length,'Recebidas integralmente'));
+    root.append(stats);
+    const p=panel('Encomendas e receções','Cada encomenda pode incluir até 60 materiais distintos; cada receção cria um movimento de stock.');
+    const search=el('div','stock-compact-toolbar');
+    const input=document.createElement('input');input.type='search';
+    input.placeholder='Pesquisar código, fornecedor ou material…';
+    input.setAttribute('aria-label','Pesquisar encomendas');
+    const state=document.createElement('select');
+    state.setAttribute('aria-label','Estado da encomenda');
+    for(const [id,name] of [['','Todos os estados'],['Aberta','Em aberto'],['Parcial','Receção parcial'],['Concluída','Concluída']]){
+      const opt=el('option','',name);opt.value=id;state.append(opt);
     }
-    if(!orders.length)p.append(empty('Nenhuma encomenda registada.'));
+    search.append(input,state);
+    p.append(search);
+    const list=el('div','stock-purchase-list');
+    p.append(list);
+    function draw(){
+      list.replaceChildren();
+      const query=input.value.trim().toLocaleLowerCase('pt-PT');
+      const filtered=orders.filter(order=>{
+        if(state.value&&order.state!==state.value)return false;
+        const text=[order.code,supplierNames[order.supplier_id],...order.lines.map(l=>materialNames[l.material_id])]
+          .join(' ').toLocaleLowerCase('pt-PT');
+        return !query||text.includes(query);
+      });
+      if(!filtered.length){list.append(empty(orders.length?'Sem encomendas para estes filtros.':'Nenhuma encomenda registada.'));return}
+      for(const order of filtered){
+        const block=el('div','stock-purchase-block');
+        const bar=el('div','stock-purchase-heading');
+        const info=el('div','stock-purchase-meta');
+        info.append(el('strong','',order.code),
+          el('small','',String(supplierNames[order.supplier_id]||'Fornecedor')+
+            ' · '+String(warehouseNames[order.warehouse_id]||'Armazém')));
+        bar.append(info,el('span',order.state==='Concluída'?'state':'pill',order.state));
+        block.append(bar);
+        const rows=table(['Material','Encomendado','Recebido','Em falta','Ação'],order.lines,line=>{
+          const tr=el('tr'),missing=Math.max(0,Number(line.ordered)-Number(line.received));
+          tr.append(td(materialNames[line.material_id]||'Material'),
+            td(num(line.ordered)),td(num(line.received)),td(num(missing)));
+          const actions=el('div','actions-inline');
+          if(missing>0&&canWrite())actions.append(button('Registar receção',()=>{
+            actionPanel(root,'Receber · '+order.code,[
+              quantityRow('Quantidade recebida','quantity',String(missing))
+            ],async values=>{
+              await call('/purchase-orders/'+encodeURIComponent(order.id)+'/receive','POST',{
+                line_id:line.id,quantity:values.quantity,request_id:request()});
+            });
+          },'secondary'));
+          tr.append(td(actions));return tr;
+        });
+        block.append(rows);list.append(block);
+      }
+    }
+    input.addEventListener('input',draw);state.addEventListener('change',draw);draw();
     root.append(p);
-    if(canManage()&&materials.length&&warehouses.length&&suppliers.length)root.append(formPanel('Nova encomenda','A API permite várias linhas; este formulário começa com uma.',[
-      field('Código da encomenda','code'),
-      choose('Fornecedor','supplier_id',suppliers.map(s=>({id:s.id,title:s.name}))),
-      choose('Armazém de receção','warehouse_id',warehouses.map(w=>({id:w.id,title:w.name}))),
-      choose('Material','material_id',materials.map(m=>({id:m.id,title:m.sku+' · '+m.name}))),
-      quantityRow('Quantidade','quantity')
-    ],'Criar encomenda',async v=>{await call('/purchase-orders','POST',{
-      code:v.code,supplier_id:v.supplier_id,warehouse_id:v.warehouse_id,
-      items:[{material_id:v.material_id,quantity:v.quantity}]
-    })}));
-    else if(!suppliers.length)root.append(warn('Adiciona primeiro um fornecedor na secção Fornecedores.'));
+    if(canManage()&&materials.length&&warehouses.length&&suppliers.some(s=>s.active)){
+      const choices=materials.filter(m=>m.active);
+      const rows=el('div','stock-purchase-line-editor');
+      const addLine=button('+ Adicionar material',()=>appendLine(),'secondary');
+      let counter=0;
+      function appendLine(){
+        const index=counter++;
+        const line=el('div','stock-purchase-edit-row');
+        const material=choose('Material','material_'+index,
+          choices.map(m=>({id:m.id,title:m.sku+' · '+m.name})));
+        const qty=quantityRow('Quantidade','quantity_'+index);
+        const remove=button('Remover',()=>{
+          if(rows.querySelectorAll('.stock-purchase-edit-row').length<=1)return;
+          line.remove();
+        },'subtle');
+        remove.setAttribute('aria-label','Remover linha da encomenda');
+        line.append(material,qty,remove);rows.append(line);
+        addLine.disabled=rows.querySelectorAll('.stock-purchase-edit-row').length>=60;
+      }
+      appendLine();
+      const footer=el('div','stock-purchase-add-line');
+      footer.append(addLine,el('small','hint','Até 60 materiais diferentes na mesma encomenda.'));
+      root.append(formPanel('Nova encomenda','Adiciona as linhas de compra e escolhe onde receber os materiais.',[
+        field('Número da encomenda','code'),
+        choose('Fornecedor','supplier_id',suppliers.filter(s=>s.active).map(s=>({id:s.id,title:s.name}))),
+        choose('Armazém de receção','warehouse_id',warehouses.filter(w=>w.active).map(w=>({id:w.id,title:w.name}))),
+        rows,footer
+      ],'Criar encomenda',async data=>{
+        const items=[];
+        for(const [key,material_id] of Object.entries(data)){
+          if(!/^material_\d+$/.test(key))continue;
+          const id=key.split('_')[1],quantity=data['quantity_'+id];
+          if(!material_id||!quantity||Number(quantity)<=0)
+            throw Error('Indica material e quantidade positiva em todas as linhas.');
+          items.push({material_id,quantity});
+        }
+        if(!items.length)throw Error('A encomenda necessita de pelo menos uma linha.');
+        if(new Set(items.map(i=>i.material_id)).size!==items.length)
+          throw Error('Não repitas o mesmo material na encomenda.');
+        await call('/purchase-orders','POST',{
+          code:data.code,supplier_id:data.supplier_id,
+          warehouse_id:data.warehouse_id,items
+        });
+      }));
+    }else if(!suppliers.some(s=>s.active))root.append(warn('Adiciona primeiro um fornecedor ativo.'));
   }
   async function counts(root){
     const [materials,warehouses,rows]=await get(['/materials','/warehouses','/counts']);
