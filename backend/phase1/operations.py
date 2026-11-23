@@ -160,6 +160,12 @@ class SupplierIn(BaseModel):
     email:str|None=Field(default=None,max_length=254)
 
 
+class SupplierPatch(BaseModel):
+    name:str|None=Field(default=None,min_length=2,max_length=100)
+    email:str|None=Field(default=None,max_length=254)
+    active:bool|None=None
+
+
 class OperationIn(BaseModel):
     warehouse_id:str
     material_id:str
@@ -406,6 +412,33 @@ def install_operations(app,db_session,get_context,require,audit_func):
             audit_func(db,company.id,user.id,"supplier.created","supplier",s.id,code)
             db.commit()
         return {"id":s.id,"code":s.code,"name":s.name}
+
+    @app.patch("/api/v2/suppliers/{supplier_id}")
+    def update_supplier(supplier_id:str,payload:SupplierPatch,
+                        ctx=Depends(require(*MANAGE_ROLES)),db:Session=Depends(db_session)):
+        user,company,_=ctx
+        with mutation(db,company.id):
+            supplier=scoped(db,Supplier,company.id,supplier_id)
+            if payload.active is False and supplier.active:
+                outstanding=db.scalar(select(PurchaseOrder.id).where(
+                    PurchaseOrder.company_id==company.id,
+                    PurchaseOrder.supplier_id==supplier.id,
+                    PurchaseOrder.state.in_(("Aberta","Parcial"))))
+                if outstanding:
+                    raise HTTPException(409,"Fornecedor com encomendas pendentes; conclui primeiro as receções.")
+            if "name" in payload.model_fields_set and payload.name is not None:
+                supplier.name=strict_name(payload.name)
+            if "email" in payload.model_fields_set:
+                value=payload.email.strip().lower() if payload.email else None
+                if value and (not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+",value) or len(value)>254):
+                    raise HTTPException(422,"Email inválido.")
+                supplier.email=value
+            if payload.active is not None:
+                supplier.active=payload.active
+            audit_func(db,company.id,user.id,"supplier.updated","supplier",supplier.id)
+            db.commit()
+        return {"id":supplier.id,"code":supplier.code,"name":supplier.name,
+                "email":supplier.email,"active":supplier.active}
 
     @app.get("/api/v2/balances")
     def list_balances(warehouse_id:str|None=None,ctx=Depends(get_context),db:Session=Depends(db_session)):
