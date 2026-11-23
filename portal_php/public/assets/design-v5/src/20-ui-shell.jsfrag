@@ -9,7 +9,7 @@
 }
   function header(){
  const alerts=workspace.materials.filter(m=>stockView.statusBySku.get(m.sku)!=='Disponível');
- const label=current==='dashboard'?'Overview':titles[current];
+ const label=current==='dashboard'?'Visão geral':titles[current];
  return `<header class="header"><div class="header-left">
   <button class="icon-btn hamburger" data-action="toggle-menu" aria-label="Abrir menu">${icon('menu')}</button>
   <button class="workspace-switch" data-nav="settings" title="Definições da empresa"><strong>stockcontrol.app</strong>${icon('chevron-down',14)}</button>
