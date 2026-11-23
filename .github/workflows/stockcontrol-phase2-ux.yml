@@ -1,0 +1,61 @@
+name: StockControl Phase 2 UX and Private Photos
+on:
+  push:
+    branches: ['feat/stockcontrol-phase2-ux-media']
+  pull_request:
+    paths:
+      - 'backend/phase1/**'
+      - 'tests/test_phase2_media.py'
+      - 'tests/test_phase2_browser.py'
+      - '.github/workflows/stockcontrol-phase2-ux.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: stockcontrol-phase2-ux-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend and test dependencies
+        run: |
+          python -m pip install -r backend/phase1/requirements.txt
+          python -m pip install pytest httpx
+      - name: Check syntax
+        run: |
+          python -m py_compile backend/phase1/main.py backend/phase1/operations.py backend/phase1/media.py
+          node --check backend/phase1/static/stock-ux.js
+          node --check backend/phase1/static/stock-ui.js
+          node --check backend/phase1/static/app.js
+      - name: Run admin, operations and photo regression tests
+        run: python -m pytest -q tests/test_phase1_api.py tests/test_phase2_api.py tests/test_phase2_media.py
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser dependencies
+        run: |
+          python -m pip install -r backend/phase1/requirements.txt
+          python -m pip install pytest httpx playwright
+          python -m playwright install --with-deps chromium
+      - name: Exercise real forms, filters and uploads in Chromium
+        run: python -m pytest -q tests/test_phase2_browser.py
+      - name: Upload actual screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-enhanced-ux-screenshots
+          path: tests/phase2-previews/
+          retention-days: 14
+          if-no-files-found: ignore
