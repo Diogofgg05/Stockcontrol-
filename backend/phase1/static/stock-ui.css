@@ -1,0 +1,43 @@
+/* Phase 2 operational workspace integrates with the Phase 1 design system */
+#navigation{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#dfe7f2 transparent;padding-bottom:12px}
+#navigation button{height:39px;min-height:39px;font-size:11px}
+#navigation .nav-icon{display:inline-grid;place-items:center;font-size:17px;min-width:20px;color:#7890b3}
+#navigation button.active .nav-icon{color:#315de5}
+.sidebar{min-height:0}
+.panel .table-scroll{border-top:1px solid #edf1f6}
+.panel .list-row+.table-scroll{border-top:0}
+.subtext{display:block;margin-top:5px;color:#90a0b3;font-size:10px;font-weight:450}
+.purchase-summary{border-top:1px solid #edf1f6}
+.purchase-summary:first-of-type{border-top:0}
+.purchase-summary .list-row{background:#fafcff;padding:11px 19px}
+.purchase-summary .table-scroll{border-top:0}
+.purchase-summary th{background:#fff}
+.purchase-summary .pill{color:#315de5;background:#edf1ff}
+.inventory-select{width:100%;min-height:42px;background:#fff;border:1px solid #dce5f1;border-radius:9px;padding:9px 11px;color:#243c5e;text-overflow:ellipsis;font-size:12px}
+.edit-form:focus-within .inventory-select{border-color:#a1b5ed}
+.edit-form .hint{margin:0 0 5px}
+.edit-form input[type=number]{font-variant-numeric:tabular-nums}
+.actions-inline button{padding:7px 10px;min-height:31px}
+.actions-inline .subtle{border-color:transparent}
+.scan-found{margin:0 20px 20px;border:1px solid #c9e9da;border-radius:11px;padding:18px;background:#f1faf6}
+.scan-found h2{margin:8px 0 5px;color:#176e57}
+.scan-found p{margin:0}
+.scan-result:empty{display:none}
+#phase2-action{border-color:#b5c8f1;box-shadow:0 6px 18px #274b7d11;scroll-margin-top:18px}
+.panel .table-scroll table th:last-child,.panel .table-scroll table td:last-child{white-space:normal}
+.grid-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+.page-heading h1{line-height:1.17}
+@media(min-width:1400px){.metric{min-height:106px}.panel{margin-bottom:15px}}
+@media(max-width:1150px){.grid-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+  #navigation button{min-height:43px}
+  .sidebar{height:100dvh;padding-bottom:12px}
+  .sidebar .side-footer{flex-shrink:0}
+  .panel .table-scroll{overflow-x:auto;scrollbar-width:thin}
+  .panel .table-scroll table{min-width:640px}
+  #main{overflow-x:hidden}
+  .edit-form .inventory-select{font-size:12px}
+  .page-heading p{line-height:1.5}
+  .actions-inline{flex-wrap:wrap}
+}
+@media(max-width:400px){.grid-metrics{gap:8px}.metric{min-height:95px;padding:12px}.metric strong{font-size:24px}}
