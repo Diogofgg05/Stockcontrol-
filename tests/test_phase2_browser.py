@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from PIL import Image
 
 import httpx
 from playwright.sync_api import sync_playwright
@@ -46,6 +47,7 @@ def test_phase2_browser_and_screenshots(tmp_path):
     env=os.environ.copy()
     env["STOCKCONTROL_DATABASE_URL"]="sqlite:///"+str(tmp_path/"phase2-browser.db")
     env["STOCKCONTROL_SETUP_KEY"]="test-internal"
+    env["STOCKCONTROL_MEDIA_ROOT"]=str(tmp_path/"media")
     proc=subprocess.Popen([
         sys.executable,"-m","uvicorn","backend.phase1.main:app",
         "--host","127.0.0.1","--port",str(port)
@@ -83,6 +85,19 @@ def test_phase2_browser_and_screenshots(tmp_path):
             form.locator('[name="unit_cost"]').fill("2.15")
             form.locator('button[type="submit"]').click()
             page.get_by_text("CAB-001").first.wait_for()
+            page.locator(".stock-ux-filters").wait_for()
+            # Search/filter controls must narrow the real API-backed material listing.
+            page.get_by_role("searchbox",name="Pesquisar inventário").fill("CAB-001")
+            assert page.locator(".stock-ux-material").count()==1
+            page.screenshot(path=str(CAPTURES/"inventory-filtered-desktop.png"))
+            page.get_by_role("searchbox",name="Pesquisar inventário").fill("")
+            # Upload a real photo with the authenticated multipart endpoint.
+            photo=tmp_path/"real-material.png"
+            Image.new("RGB",(220,150),(56,113,174)).save(photo,"PNG")
+            page.get_by_role("button",name="Adicionar foto").click()
+            page.locator("dialog.stock-ux-dialog input[type=file]").set_input_files(str(photo))
+            page.get_by_role("button",name="Guardar fotografia").click()
+            page.get_by_role("button",name="Editar foto").wait_for(timeout=10000)
             page.screenshot(path=str(CAPTURES/"inventory-desktop.png"))
             page.locator('[data-page="stockMovements"]').click()
             page.get_by_role("heading",name="Movimentos de stock").wait_for()
@@ -143,6 +158,11 @@ def test_phase2_browser_and_screenshots(tmp_path):
             mobile.locator('[data-page="inventory"]').click()
             mobile.get_by_role("heading",name="Inventário real").wait_for()
             mobile.screenshot(path=str(CAPTURES/"inventory-mobile.png"))
+            mobile.get_by_role("button",name="Adicionar material").click()
+            mobile.locator("dialog.stock-ux-dialog").wait_for()
+            mobile.screenshot(path=str(CAPTURES/"inventory-modal-mobile.png"))
+            mobile.keyboard.press("Escape")
+            mobile.locator("dialog.stock-ux-dialog").wait_for(state="hidden")
             assert mobile.evaluate(
                 "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1"
             )
