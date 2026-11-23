@@ -147,7 +147,7 @@
       metric('Colaboradores',users.length,usersAccess()?'Contas na empresa':'Acesso restrito'),
       metric('Atividade recente',events.length,'Últimos registos disponíveis'),
       metric('Materiais no catálogo',inventory.materials,'Referências reais'),
-      metric('Locais com stock baixo',inventory.low_stock_locations,'Stock disponível face ao mínimo'),
+      metric('Materiais com stock baixo',inventory.low_stock_materials,'Stock disponível face ao mínimo'),
       metric('Reservas ativas',inventory.active_reservations,'Alocadas à produção'),
       metric('Saldos por armazém',inventory.locations_with_stock,'Pontos com movimentos'));
     root.append(heading('CENTRO DE GESTÃO','Visão geral','Administração da empresa e operações de controlo.'),metrics);
