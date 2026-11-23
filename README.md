@@ -1,3 +1,13 @@
+# StockControl · Fase 1 de Administração (backend)
+
+A Fase 1 tem **painel de administração autenticado** e API FastAPI própria em [backend/phase1/](backend/phase1/). Permite criar empresas, autenticar administradores e colaboradores, gerir perfis e armazéns, consultar auditoria e revogar sessões.
+
+**É uma fundação em desenvolvimento:** requer execução em Python, base de dados própria e revisão de segurança antes de publicação. A interface de inventário V9 continua uma demonstração offline separada. Não há inventário multiempresa real na API ainda.
+
+[Instruções de instalação, testes e limitações](backend/phase1/README.md).
+
+---
+
 ## StockControl V9 — imagens industriais integradas
 
 A versão [Industrial Visual](portal_php/public/assets/design-v9/) preserva o motor de demonstração offline e acrescenta ilustrações originais de armazém, eletricidade, metais, fixação, resina, rolamentos e cabos. Inclui hero visual, filtros com imagens e miniaturas de materiais.
