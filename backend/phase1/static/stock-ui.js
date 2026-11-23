@@ -41,10 +41,9 @@ window.StockOperationsUI = function(h){
     const summary=el('div','grid-metrics');
     summary.append(metric('Referências',materials.length,'Materiais no catálogo'),
       metric('Localizações',balances.length,'Registos de stock'),
-      metric('Stock baixo',balances.filter(b=>{
-        const m=materials.find(x=>x.id===b.material_id);
-        return m&&Number(b.available)<=Number(m.minimum);
-      }).length,'Após descontar reservas'),
+      metric('Stock baixo',materials.filter(m=>Number(m.minimum)>0&&
+        balances.filter(b=>b.material_id===m.id).reduce((total,b)=>total+Number(b.available),0)
+        <=Number(m.minimum)).length,'Após descontar reservas'),
       metric('Armazéns',warehouses.length,'Associados à empresa'));
     root.append(heading('CATÁLOGO INDUSTRIAL','Inventário real','Materiais e quantidades guardados na base de dados da empresa.'),summary);
     const p=panel('Materiais ('+materials.length+')','Os preços e unidades vêm da API; QR apenas identifica o material.');
