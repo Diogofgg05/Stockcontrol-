@@ -430,7 +430,7 @@ def install_operations(app,db_session,get_context,require,audit_func):
                 supplier.name=strict_name(payload.name)
             if "email" in payload.model_fields_set:
                 value=payload.email.strip().lower() if payload.email else None
-                if value and (not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+",value) or len(value)>254):
+                if value and (not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+",value) or len(value)>254):
                     raise HTTPException(422,"Email inválido.")
                 supplier.email=value
             if payload.active is not None:
