@@ -155,6 +155,47 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.locator('[data-page="scanner"]').click()
             page.get_by_role("heading",name="Leitor de materiais").wait_for()
             page.screenshot(path=str(CAPTURES/"scanner-desktop.png"))
+
+            # Administration pages now use the same component design and real APIs.
+            page.locator('[data-page="users"]').click()
+            page.get_by_role("heading",name="Utilizadores").wait_for()
+            page.get_by_role("button",name="Adicionar utilizador").click()
+            user_form=page.locator('dialog.sr-dialog .sr-dialog-form')
+            user_form.locator('[name="name"]').fill("Trabalhador Industrial")
+            user_form.locator('[name="email"]').fill("worker@aect.example")
+            user_form.locator('[name="password"]').fill("WorkerPassword12345")
+            user_form.locator('[type="submit"]').click()
+            page.get_by_text("Trabalhador Industrial").first.wait_for()
+            page.screenshot(path=str(CAPTURES/"users-updated-desktop.png"))
+
+            page.locator('[data-page="warehouses"]').click()
+            page.get_by_role("heading",name="Armazéns").wait_for()
+            page.get_by_role("button",name="Novo armazém").click()
+            warehouse_form=page.locator('dialog.sr-dialog .sr-dialog-form')
+            warehouse_form.locator('[name="code"]').fill("ARM-02")
+            warehouse_form.locator('[name="name"]').fill("Armazém secundário")
+            warehouse_form.locator('[name="location"]').fill("Porto")
+            warehouse_form.locator('[type="submit"]').click()
+            page.get_by_text("Armazém secundário").first.wait_for()
+            page.screenshot(path=str(CAPTURES/"warehouses-updated-desktop.png"))
+
+            page.locator('[data-page="company"]').click()
+            page.get_by_role("heading",name="Definições da empresa").wait_for()
+            page.get_by_role("button",name="Editar empresa").click()
+            company_form=page.locator('dialog.sr-dialog .sr-dialog-form')
+            company_form.locator('[name="name"]').fill("Fábrica AECT Industrial")
+            company_form.locator('[type="submit"]').click()
+            page.get_by_text("Fábrica AECT Industrial").first.wait_for()
+            page.screenshot(path=str(CAPTURES/"company-updated-desktop.png"))
+
+            page.locator('[data-page="audit"]').click()
+            page.get_by_role("heading",name="Auditoria").wait_for()
+            page.locator('.sr-audit-filters [name="action"]').select_option("material.created")
+            page.get_by_text("material.created").first.wait_for()
+            page.screenshot(path=str(CAPTURES/"audit-updated-desktop.png"))
+            with page.expect_download() as download_event:
+                page.get_by_role("button",name="Exportar esta página CSV").click()
+            assert download_event.value.suggested_filename == "stockcontrol-auditoria.csv"
             assert errors==[],errors
             context.close()
 
