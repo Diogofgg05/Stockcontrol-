@@ -244,6 +244,7 @@ def create_app(database_url=None, setup_key=None):
             cursor = connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
+    from .operations import install_operations
     Base.metadata.create_all(bind=engine)  # Dev bootstrap only: migrations required in production.
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     app = FastAPI(title="StockControl · Administração Fase 1", version="0.1.0")
@@ -534,6 +535,7 @@ def create_app(database_url=None, setup_key=None):
                  "target_id": e.target_id, "detail": e.detail, "actor_id": e.actor_id,
                  "created_at": e.created_at.isoformat()} for e in events]
 
+    install_operations(app, db_session, get_context, require, audit)
     return app
 
 
