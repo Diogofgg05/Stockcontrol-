@@ -191,7 +191,7 @@ def test_phase2_browser_and_screenshots(tmp_path):
             page.locator('[data-page="audit"]').click()
             page.get_by_role("heading",name="Auditoria").wait_for()
             page.locator('.sr-audit-filters [name="action"]').select_option("material.created")
-            page.get_by_text("material.created").first.wait_for()
+            page.locator(".sr-audit-result tbody tr").filter(has_text="material.created").first.wait_for()
             page.screenshot(path=str(CAPTURES/"audit-updated-desktop.png"))
             with page.expect_download() as download_event:
                 page.get_by_role("button",name="Exportar esta página CSV").click()
