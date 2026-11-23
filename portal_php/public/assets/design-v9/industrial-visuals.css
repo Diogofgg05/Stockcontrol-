@@ -1,0 +1,69 @@
+
+/* StockControl V9 · ilustracao industrial integrada; overrides do Premium Light. */
+:root{--v9-blue:#315de5;--v9-ink:#1d3049;--v9-line:#e1eaf5}
+.v9-visual-banner{margin:12px var(--sc-content-pad) 13px;min-height:165px;display:grid;grid-template-columns:minmax(0,1fr) minmax(225px,35%);overflow:hidden;isolation:isolate;background:linear-gradient(105deg,#123f8e 0%,#1e52b0 53%,#4279d0 100%);color:#fff;border:1px solid #1c53a7;border-radius:15px;box-shadow:0 5px 18px #264a7a13}
+.v9-visual-banner-copy{padding:20px clamp(18px,2vw,30px);display:flex;justify-content:center;flex-direction:column;min-width:0;z-index:1}
+.v9-visual-kicker{font-size:9px;font-weight:800;letter-spacing:1.45px;color:#c1d9ff}
+.v9-visual-banner h2{color:#fff;font-size:clamp(18px,1.7vw,25px);font-weight:750;line-height:1.22;margin:8px 0 7px;letter-spacing:-.035em}
+.v9-visual-banner p{color:#d7e5ff;font-size:11px;line-height:1.5;margin:0;max-width:490px}
+.v9-banner-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.v9-visual-button{font-size:10px;font-weight:740;border-radius:8px;border:1px solid #ffffff48;padding:9px 11px;min-height:34px;transition:background .15s,transform .15s}
+.v9-visual-button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.v9-visual-button:hover{transform:translateY(-1px)}
+.v9-visual-button.primary{background:#fff;color:#2450ab;border-color:#fff}
+.v9-visual-button.primary:hover{background:#ebf3ff}
+.v9-visual-button.subtle{background:#ffffff13;color:#fff}
+.v9-visual-button.subtle:hover{background:#ffffff27}
+.v9-visual-banner-image{position:relative;min-height:160px;overflow:hidden;background:#a8bfdc}
+.v9-visual-banner-image:before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,#2152a4 0%,#2152a410 33%,transparent 80%)}
+.v9-visual-banner-image>img{display:block;width:100%;height:100%;position:absolute;inset:0;object-fit:cover;object-position:center 54%}
+.v9-art-label{position:absolute;z-index:2;right:9px;bottom:9px;font-size:9px;background:#102b50b8;border:1px solid #ffffff32;color:#fff;border-radius:6px;padding:4px 7px}
+.v9-category-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:12px var(--sc-content-pad) 13px;background:#f7f9fd}
+.v9-category-card{display:flex;align-items:center;gap:7px;justify-content:space-between;min-width:0;min-height:94px;border-radius:12px;border:1px solid #e1e8f2;background:#fff;padding:11px 9px 11px 13px;text-align:left;overflow:hidden;box-shadow:0 1px 4px #27395108;transition:background .15s,border-color .15s,transform .15s}
+.v9-category-card:hover{background:#f4f8ff;border-color:#a6bdef;transform:translateY(-1px)}
+.v9-category-card:focus-visible{outline:3px solid #9bb7ff;outline-offset:2px}
+.v9-category-copy{display:grid;gap:6px;min-width:0;position:relative;z-index:1;align-self:center}
+.v9-category-copy strong{font-size:11px;line-height:1.3;color:#203952;font-weight:770}
+.v9-category-copy small{font-size:9px;color:#71849a;line-height:1.35}
+.v9-category-image{display:block;flex:0 0 45%;min-width:0;height:74px;border-radius:9px;overflow:hidden;background:#e4edfa}
+.v9-category-image img{height:100%;width:100%;object-fit:cover;display:block}
+.v9-material-thumbnail{width:45px!important;height:43px!important;min-width:45px!important;padding:0!important;overflow:hidden!important;border-radius:9px!important;background:#e9f0f8!important;box-shadow:inset 0 0 0 1px #dce7f2}
+.v9-material-thumbnail img{display:block;width:100%;height:100%;object-fit:cover}
+.product-cell{gap:11px}
+.v9-alert-name{white-space:nowrap;vertical-align:middle!important}
+.v9-alert-thumb{display:inline-block;vertical-align:middle;width:32px;height:30px;object-fit:cover;border-radius:7px;margin-right:8px;background:#e5eef8;border:1px solid #dfebf4}
+.v9-website-visual{position:relative;margin-bottom:14px;height:170px;border-radius:11px;overflow:hidden;background:#e9f0f8}
+.v9-website-visual>img{width:100%;height:100%;object-fit:cover;display:block}
+.v9-website-visual .v9-art-label{font-size:9px}
+.v9-feature-visual{height:125px;overflow:hidden;border-radius:11px;margin-bottom:13px;background:#eaf2fc}
+.v9-feature-visual img{height:100%;width:100%;object-fit:cover}
+.web-preview{padding:15px!important}
+.feature-card{padding:17px!important}
+.feature-card h3{margin:8px 0 5px!important}
+.feature-card .sc-icon{color:#315de5}
+.web-hero{align-items:center;gap:20px!important;padding:27px clamp(20px,3vw,38px)!important}
+.web-hero h1{font-size:clamp(35px,3.5vw,54px)!important}
+.web-hero p{max-width:500px}
+@media(min-width:1200px) and (max-height:800px){.v9-visual-banner{min-height:136px}.v9-visual-banner-image{min-height:135px}.v9-visual-banner-copy{padding:12px 22px}.v9-visual-banner h2{font-size:19px}.v9-banner-actions{margin-top:8px}}
+@media(max-width:1150px){.v9-category-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.v9-category-card{min-height:90px}.v9-category-image{height:71px}}
+@media(max-width:800px){.v9-visual-banner{grid-template-columns:minmax(0,1fr) 32%}.v9-visual-banner h2{font-size:20px}.v9-category-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:590px){
+ .v9-visual-banner{margin:10px 12px 10px;grid-template-columns:1fr;min-height:0;border-radius:12px}
+ .v9-visual-banner-copy{padding:15px 16px}
+ .v9-visual-banner h2{font-size:19px;margin:7px 0}
+ .v9-visual-banner p{font-size:10px}
+ .v9-visual-banner-image{display:none}
+ .v9-visual-kicker{font-size:8px;letter-spacing:1px}
+ .v9-banner-actions{margin-top:11px}
+ .v9-category-strip{padding:10px 12px 12px;gap:8px}
+ .v9-category-card{height:86px;min-height:86px;padding:9px 7px 9px 10px}
+ .v9-category-copy strong{font-size:10px}
+ .v9-category-copy small{font-size:8.5px}
+ .v9-category-image{height:61px;flex-basis:42%}
+ .v9-material-thumbnail{width:39px!important;height:39px!important;min-width:39px!important}
+ .v9-website-visual{height:125px}
+ .v9-feature-visual{height:90px}
+ .v9-alert-thumb{width:27px;height:27px;margin-right:6px}
+}
+@media(max-width:380px){.v9-category-strip{grid-template-columns:1fr 1fr}.v9-category-image{flex-basis:37%}.v9-category-copy small{display:none}}
+@media(prefers-reduced-motion:reduce){.v9-category-card,.v9-visual-button{transition:none}}
