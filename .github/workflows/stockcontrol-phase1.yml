@@ -1,7 +1,7 @@
 name: StockControl Phase 1 API
 on:
   push:
-    branches: ['feat/stockcontrol-phase1-administration']
+    branches: [main, 'feat/stockcontrol-phase1-administration']
   pull_request:
     paths:
       - 'backend/phase1/**'
