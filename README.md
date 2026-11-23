@@ -1,3 +1,11 @@
+## Fase 2.2 — operações e administração consolidadas
+
+A área autenticada do StockControl oferece agora movimentos, reservas, fornecedores, **compras com várias linhas**, contagens, armazéns, utilizadores, empresa e auditoria com **interface consistente, filtros e modais**.
+
+[Ver a Fase 2.2: funcionalidades, testes e limitações](backend/phase1/PHASE2_REST.md).
+
+---
+
 ## StockControl · Inventário visual (Fase 2.1)
 
 O painel autenticado em `/admin` inclui agora **pesquisa e filtros de materiais, paginação, modais consistentes e fotografias privadas por empresa**, com ilustrações industriais como fallback. As fotografias são submetidas por Administrador/Gestor, validadas e convertidas para WebP, sendo consultadas exclusivamente através da API autorizada.
