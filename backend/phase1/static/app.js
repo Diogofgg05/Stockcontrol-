@@ -285,7 +285,16 @@
     el,heading,panel,table,td,button,field,select,formPanel,
     notify,render,canManage:()=>['Administrador','Gestor'].includes(currentUser?.role),
     canWrite:()=>['Administrador','Gestor','Operador'].includes(currentUser?.role),getToken:()=>token});
-  const pages={dashboard,users,warehouses,audit,company,...operationalPages};
+  const adminPages=window.StockAdminPages({
+    call:(path,method,body)=>call(path,method,body,'v1'),
+    stock:(path,method,body)=>call(path,method,body,'v2'),
+    render,notify,
+    canAdmin:()=>currentUser?.role==='Administrador',
+    canManage:()=>['Administrador','Gestor'].includes(currentUser?.role),
+    canAudit:()=>['Administrador','Gestor','Auditor'].includes(currentUser?.role),
+    canUsers:()=>['Administrador','Gestor','Auditor'].includes(currentUser?.role)
+  });
+  const pages={dashboard,users,warehouses,audit,company,...adminPages,...operationalPages};
   async function render(){
     const container=by('content');
     window.StockControlUXReset?.();
