@@ -247,7 +247,7 @@ def create_app(database_url=None, setup_key=None):
     from .operations import install_operations
     Base.metadata.create_all(bind=engine)  # Dev bootstrap only: migrations required in production.
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
-    app = FastAPI(title="StockControl · Administração Fase 1", version="0.1.0")
+    app = FastAPI(title="StockControl · Operações Industriais Fase 2", version="0.2.0")
     app.state.engine = engine
     app.state.SessionLocal = SessionLocal
     app.state.attempts = {}
