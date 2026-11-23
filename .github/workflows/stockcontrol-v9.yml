@@ -1,0 +1,57 @@
+name: StockControl V9 Industrial Visuals
+on:
+  push:
+    branches: ['feat/stockcontrol-v9-industrial-visuals']
+  pull_request:
+    paths:
+      - 'portal_php/public/assets/design-v9/**'
+      - 'portal_php/public/assets/design-v5/**'
+      - 'tests/stockcontrol_v9_visual.cjs'
+      - '.github/workflows/stockcontrol-v9.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package V9 offline preview for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-v9-source
+          path: |
+            portal_php/public/assets/design-v5/
+            portal_php/public/assets/design-v8/
+            portal_php/public/assets/design-v9/
+            tests/stockcontrol_v9_visual.cjs
+          retention-days: 7
+  verify-and-capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check existing bundle and domain
+        run: |
+          node portal_php/public/assets/design-v5/tools/build.cjs --check
+          node --check portal_php/public/assets/design-v9/enhance.js
+          node --check tests/stockcontrol_v9_visual.cjs
+          node --test tests/stockcontrol_v5_model.test.cjs
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test images, responsive layouts and functionality
+        run: node --test tests/stockcontrol_v9_visual.cjs
+      - name: Preserve real rendered screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockcontrol-v9-real-screenshots
+          path: tests/v9-previews/
+          retention-days: 14
+          if-no-files-found: ignore
